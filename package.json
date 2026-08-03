@@ -1,0 +1,13 @@
+{
+    "name": "sillybunny-macroenhanced",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "description": "SillyBunny extension that enhances the experimental macro engine.",
+    "scripts": {
+        "test": "node --test test/*.test.js"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

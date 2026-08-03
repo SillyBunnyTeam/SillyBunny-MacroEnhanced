@@ -1,0 +1,241 @@
+/* ---- settings drawer ---- */
+
+.me-drawer-notice,
+.me-drawer-warning,
+.me-drawer-hint {
+    margin: 5px 0;
+    padding: 5px;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.9);
+    opacity: 0.85;
+}
+
+.me-drawer-warning {
+    border-left: 3px solid var(--warning, #f0ad4e);
+    padding-left: 8px;
+}
+
+.me-drawer-section-title {
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+/* ---- custom macro manager ---- */
+
+.me-custom-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 5px 0;
+}
+
+.me-custom-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.me-custom-name {
+    font-family: var(--monoFontFamily, monospace);
+}
+
+.me-custom-scope {
+    font-size: calc(var(--mainFontSize, 1rem) * 0.8);
+    border: 1px solid var(--SmartThemeBorderColor, #444);
+    border-radius: 4px;
+    padding: 0 4px;
+    opacity: 0.8;
+}
+
+.me-custom-desc {
+    opacity: 0.7;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.me-custom-button {
+    padding: 2px 8px;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+}
+
+.me-custom-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid var(--SmartThemeBorderColor, #444);
+    border-radius: 6px;
+}
+
+.me-custom-editor-title {
+    font-weight: bold;
+}
+
+.me-custom-template {
+    font-family: var(--monoFontFamily, monospace);
+}
+
+.me-custom-hint {
+    font-size: calc(var(--mainFontSize, 1rem) * 0.8);
+    opacity: 0.7;
+}
+
+.me-custom-arg-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.me-custom-arg-label {
+    font-size: calc(var(--mainFontSize, 1rem) * 0.8);
+    opacity: 0.7;
+}
+
+.me-custom-scope-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.me-custom-problems {
+    color: var(--warning, #f0ad4e);
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+}
+
+.me-custom-editor-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.me-custom-empty {
+    opacity: 0.7;
+}
+
+/* ---- workbench ---- */
+
+.me-workbench {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+    height: 100%;
+}
+
+.me-workbench-heading {
+    margin: 0;
+}
+
+.me-workbench-columns {
+    display: flex;
+    gap: 12px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.me-workbench-left {
+    flex: 3 1 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.me-workbench-right {
+    flex: 2 1 0;
+    min-width: 0;
+    overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+    .me-workbench-columns {
+        flex-direction: column;
+    }
+}
+
+.me-workbench-input {
+    width: 100%;
+    font-family: var(--monoFontFamily, monospace);
+    resize: vertical;
+}
+
+.me-workbench-label {
+    font-weight: bold;
+}
+
+.me-workbench-meta {
+    font-weight: normal;
+    opacity: 0.6;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.8);
+}
+
+.me-workbench-output {
+    min-height: 6em;
+    max-height: 40vh;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid var(--SmartThemeBorderColor, #444);
+    border-radius: 6px;
+    padding: 6px;
+    margin: 0;
+}
+
+.me-workbench-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.me-workbench-footnote {
+    font-size: calc(var(--mainFontSize, 1rem) * 0.8);
+    opacity: 0.7;
+}
+
+/* ---- inspector ---- */
+
+.me-inspector-section {
+    margin-bottom: 10px;
+}
+
+.me-inspector-title {
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+.me-inspector-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+}
+
+.me-inspector-table td {
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #333);
+    padding: 2px 6px 2px 0;
+    vertical-align: top;
+    word-break: break-word;
+}
+
+.me-inspector-name {
+    font-family: var(--monoFontFamily, monospace);
+    white-space: nowrap;
+}
+
+.me-inspector-scope {
+    opacity: 0.7;
+    white-space: nowrap;
+}
+
+.me-inspector-empty {
+    opacity: 0.6;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+}
+
+.me-inspector-warning {
+    color: var(--warning, #f0ad4e);
+    font-size: calc(var(--mainFontSize, 1rem) * 0.8);
+    margin-top: 6px;
+}

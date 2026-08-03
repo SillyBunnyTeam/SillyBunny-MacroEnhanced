@@ -1,0 +1,15 @@
+{
+    "display_name": "Macro Enhanced",
+    "author": "platberlitz",
+    "version": "0.1.0",
+    "description": "Enhances the experimental macro engine: text/math/list utility macros, lorebook macros, user-defined custom macros, and a sandboxed Macro Workbench.",
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "loading_order": 100,
+    "hooks": {
+        "activate": "init",
+        "disable": "deactivate"
+    }
+}
