@@ -1,6 +1,7 @@
 import { getRemaps } from './registration.js';
 import { getChatState, touchChatState } from './chat-state.js';
 import { renderCustomMacroManager } from './custom/editor-ui.js';
+import { renderTemplateGallery } from './custom/gallery-ui.js';
 import { openWorkbench } from './workbench/panel.js';
 import { truncateText } from './utility-impl.js';
 import { button, el } from './dom.js';
@@ -64,8 +65,15 @@ export function renderDrawer({ engineAvailable }) {
     content.appendChild(el('div', 'me-drawer-section-title', 'Your custom macros'));
     const managerHost = el('div');
     content.appendChild(managerHost);
-    renderCustomMacroManager(managerHost, {
+    const manager = renderCustomMacroManager(managerHost, {
         onTestInWorkbench: (text) => openWorkbench({ initialText: text }),
+    });
+
+    content.appendChild(el('div', 'me-drawer-section-title', 'Template gallery'));
+    const galleryHost = el('div');
+    content.appendChild(galleryHost);
+    renderTemplateGallery(galleryHost, {
+        onInstalled: () => manager.refreshList(),
     });
 
     renderFrozenValues(content, { engineAvailable });
