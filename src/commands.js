@@ -8,6 +8,7 @@ import { getRegisteredCustomNames, syncRegistrations } from './custom/registrar.
 import { createSandbox } from './workbench/sandbox.js';
 import { openWorkbench } from './workbench/panel.js';
 import { formatAuditReport, runAudit } from './auditor/audit.js';
+import { exportPack } from './custom/pack.js';
 
 let commandsRegistered = false;
 let extensionActive = true;
@@ -378,6 +379,34 @@ export function registerCommands() {
             ],
             returns: 'a confirmation message',
             helpString: 'Removes a custom macro (from every scope it appears in).',
+        }));
+
+        registerCommand(SlashCommand.fromProps({
+            name: 'me-export',
+            callback: (named) => {
+                if (!extensionActive) {
+                    return INACTIVE;
+                }
+                const scopeRaw = String(named?.scope ?? SCOPE_GLOBAL).toLowerCase();
+                const defs = scopeRaw === SCOPE_CHARACTER ? getCharacterDefs()
+                    : scopeRaw === SCOPE_CHAT ? getChatDefs() : getGlobalDefs();
+                if (!defs.length) {
+                    return `No custom macros in the ${scopeRaw} scope.`;
+                }
+                return JSON.stringify(exportPack(defs, { exportedAt: new Date().toISOString() }), null, 2);
+            },
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'scope',
+                    description: 'global (default), character, or chat.',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    defaultValue: SCOPE_GLOBAL,
+                    enumList: [SCOPE_GLOBAL, SCOPE_CHARACTER, SCOPE_CHAT],
+                    isRequired: false,
+                }),
+            ],
+            returns: 'the scope\'s custom macros as shareable pack JSON',
+            helpString: 'Exports custom macros as pack JSON (the drawer has matching file download/upload buttons).',
         }));
 
         registerCommand(SlashCommand.fromProps({

@@ -3,6 +3,7 @@ import { getChatState } from '../chat-state.js';
 import { button, el } from '../dom.js';
 import { createSandbox, findUnshadowedVariableMacros } from './sandbox.js';
 import { renderInspector } from './inspector.js';
+import { extractMacroInfos, runTrace } from './trace.js';
 import { renderAuditorTab } from '../auditor/auditor-ui.js';
 
 const EVAL_DEBOUNCE_MS = 300;
@@ -137,6 +138,7 @@ export async function openWorkbench({ initialText = '' } = {}) {
     };
     const playgroundView = addTab('Playground');
     const auditView = addTab('Cache Audit');
+    const traceView = addTab('Trace');
 
     renderAuditorTab(auditView, {
         makeSandboxEvaluate: () => {
@@ -191,9 +193,48 @@ export async function openWorkbench({ initialText = '' } = {}) {
     playgroundView.appendChild(el('div', 'me-workbench-footnote',
         'Sandboxed — nothing is saved. Variable macros and frozen values ({{freeze}}, {{sticky}}, …) write to a throwaway copy; {{.var}} shorthand changes are reverted after each preview. Ctrl+Enter evaluates immediately.'));
 
+    // ---- Trace tab: per-span timing of the Playground text ----
+    traceView.appendChild(el('div', 'me-audit-intro',
+        'Evaluates the Playground text one macro span at a time (sandboxed, sharing the Playground\'s variable state) and shows what each span produced and how long it took. Macros nested inside a span are not timed individually.'));
+    const traceResults = el('div', 'me-trace-results');
+    traceView.appendChild(button('menu_button', 'Trace Playground text', () => {
+        traceResults.innerHTML = '';
+        const text = input.value;
+        if (!text.trim()) {
+            traceResults.appendChild(el('div', 'me-inspector-empty', 'Type something in the Playground tab first.'));
+            return;
+        }
+        const liveCtx = SillyTavern.getContext();
+        try {
+            const rows = runTrace(text, {
+                extract: (slice) => extractMacroInfos(slice, { parser: liveCtx.macros.parser, cstWalker: liveCtx.macros.cstWalker }),
+                evaluate: (slice) => evaluateSandboxed(liveCtx, sandbox, slice),
+            });
+            if (!rows.length) {
+                traceResults.appendChild(el('div', 'me-inspector-empty', 'No macros found in the Playground text.'));
+                refreshInspector();
+                return;
+            }
+            const table = el('table', 'me-inspector-table');
+            for (const row of rows) {
+                const tr = el('tr');
+                tr.appendChild(el('td', 'me-inspector-name', row.text.length > 60 ? `${row.text.slice(0, 59)}…` : row.text));
+                tr.appendChild(el('td', 'me-inspector-value', row.error ? `Error: ${row.error}` : (row.output.length > 80 ? `${row.output.slice(0, 79)}…` : row.output)));
+                tr.appendChild(el('td', 'me-trace-ms', `${row.ms.toFixed(1)} ms`));
+                table.appendChild(tr);
+            }
+            traceResults.appendChild(table);
+        } catch (error) {
+            traceResults.appendChild(el('div', 'me-inspector-warning', `Trace failed: ${error?.message ?? error}`));
+        }
+        refreshInspector();
+    }));
+    traceView.appendChild(traceResults);
+
     // Start on the Playground tab.
     views.get('Playground').tab.classList.add('me-workbench-tab-active');
     auditView.style.display = 'none';
+    traceView.style.display = 'none';
 
     const refreshInspector = () => {
         const liveCtx = SillyTavern.getContext();
