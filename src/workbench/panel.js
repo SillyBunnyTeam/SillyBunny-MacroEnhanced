@@ -3,6 +3,7 @@ import { getChatState } from '../chat-state.js';
 import { button, el } from '../dom.js';
 import { createSandbox, findUnshadowedVariableMacros } from './sandbox.js';
 import { renderInspector } from './inspector.js';
+import { renderAuditorTab } from '../auditor/auditor-ui.js';
 
 const EVAL_DEBOUNCE_MS = 300;
 const ENGINE_OFF_NOTICE = 'The Macro Workbench needs the Experimental Macro Engine. Turn it on under User Settings → Experimental Macro Engine.';
@@ -115,12 +116,46 @@ export async function openWorkbench({ initialText = '' } = {}) {
     const root = el('div', 'me-workbench');
     root.appendChild(el('h3', 'me-workbench-heading', 'Macro Workbench'));
 
+    // Tab strip: Playground | Cache Audit (Phase 6 adds Trace).
+    const tabs = el('div', 'me-workbench-tabs');
+    root.appendChild(tabs);
+    const views = new Map();
+    const addTab = (name) => {
+        const view = el('div', 'me-workbench-view');
+        const tab = button('menu_button me-workbench-tab', name, () => {
+            for (const [, { tab: otherTab, view: otherView }] of views) {
+                otherTab.classList.remove('me-workbench-tab-active');
+                otherView.style.display = 'none';
+            }
+            tab.classList.add('me-workbench-tab-active');
+            view.style.display = '';
+        });
+        tabs.appendChild(tab);
+        root.appendChild(view);
+        views.set(name, { tab, view });
+        return view;
+    };
+    const playgroundView = addTab('Playground');
+    const auditView = addTab('Cache Audit');
+
+    renderAuditorTab(auditView, {
+        makeSandboxEvaluate: () => {
+            const liveCtx = SillyTavern.getContext();
+            const auditSandbox = createSandbox({
+                getLocalStore: () => SillyTavern.getContext().chatMetadata?.variables ?? {},
+                getGlobalStore: () => SillyTavern.getContext().extensionSettings?.variables?.global ?? {},
+                getChatState: () => getChatState(),
+            });
+            return (text) => evaluateSandboxed(liveCtx, auditSandbox, text);
+        },
+    });
+
     const columns = el('div', 'me-workbench-columns');
     const left = el('div', 'me-workbench-left');
     const right = el('div', 'me-workbench-right');
     columns.appendChild(left);
     columns.appendChild(right);
-    root.appendChild(columns);
+    playgroundView.appendChild(columns);
 
     const input = document.createElement('textarea');
     input.className = 'text_pole me-workbench-input';
@@ -153,8 +188,12 @@ export async function openWorkbench({ initialText = '' } = {}) {
     const inspectorContainer = el('div', 'me-workbench-inspector');
     right.appendChild(inspectorContainer);
 
-    root.appendChild(el('div', 'me-workbench-footnote',
+    playgroundView.appendChild(el('div', 'me-workbench-footnote',
         'Sandboxed — nothing is saved. Variable macros and frozen values ({{freeze}}, {{sticky}}, …) write to a throwaway copy; {{.var}} shorthand changes are reverted after each preview. Ctrl+Enter evaluates immediately.'));
+
+    // Start on the Playground tab.
+    views.get('Playground').tab.classList.add('me-workbench-tab-active');
+    auditView.style.display = 'none';
 
     const refreshInspector = () => {
         const liveCtx = SillyTavern.getContext();
