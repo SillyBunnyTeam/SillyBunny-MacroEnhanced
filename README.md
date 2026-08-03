@@ -1,15 +1,15 @@
 # Macro Enhanced
 
-A SillyBunny extension that builds on the experimental macro engine with four things it doesn't have out of the box:
+A SillyBunny extension that adds four things to the experimental macro engine:
 
-1. **Utility macros** — text tools, real math, and list handling for your prompts.
-2. **Lorebook macros** — pull World Info content into a prompt on demand.
-3. **Custom macros** — create your own macros in a settings panel, no coding needed.
-4. **Macro Workbench** — a sandboxed playground to preview macro text before using it.
+1. Utility macros for text, math and lists.
+2. Lorebook macros that pull World Info content into a prompt.
+3. Custom macros you define yourself, no coding needed.
+4. A sandboxed Macro Workbench for previewing macro text.
 
-Requires the **Experimental Macro Engine** (User Settings → Experimental Macro Engine, on by default). If it's off, the extension stays dormant and tells you why in its settings panel — flip the toggle and it activates on the spot.
+Requires the Experimental Macro Engine (User Settings, on by default). If it's off, the extension stays inactive and says so in its settings panel. Turning the engine on activates it right away.
 
-Every macro below shows up in `/help macros` and in autocomplete with full documentation, grouped under the `enhanced-…` categories.
+All macros appear in `/help macros` and in autocomplete, grouped under the `enhanced-` categories.
 
 ## Utility macros
 
@@ -17,22 +17,22 @@ Text:
 
 | Macro | What it does |
 |---|---|
-| `{{upper::text}}` / `{{lower::text}}` | UPPERCASE / lowercase |
+| `{{upper::text}}` / `{{lower::text}}` | Uppercase / lowercase |
 | `{{capitalize::text}}` | Capitalizes the first letter |
-| `{{replace::text::search::replacement}}` | Replaces every occurrence (plain text; replacement optional) |
-| `{{substring::text::start::end}}` | Cuts by character positions; negatives count from the end |
+| `{{replace::text::search::replacement}}` | Replaces every occurrence (plain text, replacement optional) |
+| `{{substring::text::start::end}}` | Cuts by character position, negatives count from the end |
 | `{{length::text}}` | Character count |
 | `{{repeat::text::count}}` | Repeats text (capped at 1000) |
-| `{{default::value::fallback}}` | Uses the fallback when the value is empty — great around `{{getvar}}` |
+| `{{default::value::fallback}}` | Uses the fallback when the value is empty, useful with `{{getvar}}` |
 | `{{truncate::text::max::ellipsis}}` | Shortens to a character limit |
-| `{{truncatetokens::text::maxTokens}}` | Shortens to a rough token budget (~4 characters per token — an estimate, not exact) |
-| `{{tokencount::text}}` | Rough token estimate for the text |
+| `{{truncatetokens::text::maxTokens}}` | Shortens to a rough token budget (about 4 characters per token) |
+| `{{tokencount::text}}` | Rough token estimate |
 
 Math:
 
 | Macro | What it does |
 |---|---|
-| `{{calc::2 * (3 + 4)}}` | Full arithmetic: `+ - * / % ^`, parentheses, `min`, `max`, `round`, `floor`, `ceil`, `abs`, `sqrt`, `pow`, `pi`, `e` |
+| `{{calc::2 * (3 + 4)}}` | Arithmetic: `+ - * / % ^`, parentheses, `min`, `max`, `round`, `floor`, `ceil`, `abs`, `sqrt`, `pow`, `pi`, `e` |
 | `{{round::value::decimals}}` | Rounds a number |
 | `{{clamp::value::min::max}}` | Keeps a number inside a range |
 
@@ -41,61 +41,63 @@ Lists:
 | Macro | What it does |
 |---|---|
 | `{{join::, ::a::b::c}}` | Joins arguments with a separator |
-| `{{item::index::list::separator}}` | Picks one item (0-based; negatives from the end; separator defaults to `,`) |
+| `{{item::index::list::separator}}` | Picks one item (0-based, negatives from the end, separator defaults to `,`) |
 | `{{count::list::separator}}` | Counts items |
-| `{{listsort::list::separator::order}}` | Sorts naturally (`item2` before `item10`); `desc` reverses |
+| `{{listsort::list::separator::order}}` | Sorts naturally (`item2` before `item10`), `desc` reverses |
 | `{{jsonget::json::path}}` | Reads a value from JSON, e.g. `items[0].name` |
 
-Macros nest freely: `{{calc::max({{getvar::hp}}, 0)}}`.
+Macros can be nested: `{{calc::max({{getvar::hp}}, 0)}}`.
 
 ## Lorebook macros
 
 | Macro | What it does |
 |---|---|
-| `{{lore::Entry}}` (alias `{{wi::…}}`) | Inserts an entry's content by its title (memo) or uid; macros inside the entry expand too |
+| `{{lore::Entry}}` (alias `{{wi::…}}`) | Inserts an entry's content by its title (memo) or uid, macros inside it expand too |
 | `{{lorekeys::Entry}}` | The entry's trigger keywords |
-| `{{loreexists::Entry}}` | `true`/`false` — pairs well with `{{if}}` |
+| `{{loreexists::Entry}}` | `true`/`false`, for use with `{{if}}` |
 | `{{lorecount::scope}}` | Entry count: `active` (triggered last generation), `bound`, or `all` |
 | `{{loreactive}}` | Titles of the entries that triggered last generation |
 | `{{lorebooks}}` | The books bound to this chat |
 
-Without an explicit book, entries are searched in order: chat lorebook → character books → global books. Add a book name as a second argument to target one: `{{lore::Kingdom::My World}}`.
+Without an explicit book, entries are searched in order: chat lorebook, then character books, then global books. Add a book name as a second argument to target one: `{{lore::Kingdom::My World}}`.
 
-Books load in the background. In a freshly opened chat the very first evaluation of an unloaded book can come back empty; it's correct from the next evaluation on.
+Books load in the background, so right after opening a chat the first use of a book can come back empty. It works from the next evaluation on.
 
 ## Custom macros
 
-Open **Extensions → Macro Enhanced → Your custom macros**. A macro is a name plus a template — the text it expands to, which can use any other macros. Add arguments if you want them: an argument named `who` is available inside the template as `{{who}}` (or `{{arg1}}`, `{{arg2}}`, … by position), and callers pass values with `{{yourmacro::value1::value2}}`. Optional arguments can have defaults.
+Open Extensions → Macro Enhanced → Your custom macros. A macro is a name plus a template, the text it expands to. Templates can use other macros. Arguments are optional: an argument named `who` is available in the template as `{{who}}` (or `{{arg1}}`, `{{arg2}}` by position), and callers pass values with `{{yourmacro::value1::value2}}`. Optional arguments can have defaults.
 
-Macros are saved globally or for the current character only (character macros win when names clash, and travel with the chat). Everything appears in `/help macros` under *enhanced-custom* with your description. Names are checked as you type: you can't take a name that belongs to another extension, to one of Macro Enhanced's own built-ins, or that starts with the reserved `me-` prefix.
+Macros are saved globally or for the current character only. Character macros win when names clash and travel with the chat. Names are checked as you type; you can't use a name that belongs to another extension, one of this extension's built-ins, or the reserved `me-` prefix.
 
-**Test in Workbench** saves the macro first (running the same checks as Save), then opens it in the Workbench — so you always test exactly what you typed.
+"Test in Workbench" saves the macro first (with the same checks as Save), then opens it in the Workbench.
 
 From scripts: `/me-define name=greet args=who Hello {{who}}!` and `/me-undefine greet`.
 
-Self-referencing macros are stopped automatically (with a console warning) instead of looping forever.
+Macros that include themselves are stopped with a console warning instead of looping forever.
 
 ## Macro Workbench
 
-Open it from the extension's settings panel or with `/me-workbench`. Type on the left, see the fully evaluated result live on the right — plus every chat and global variable, and a **pending changes** list showing what the text *would* have changed (`hp: 50 → 35`). Results update as you type; Ctrl+Enter evaluates immediately, and **Copy result** confirms with a "Copied ✓".
+Open it from the settings panel or with `/me-workbench`. Type on the left, the evaluated result appears on the right, along with every chat and global variable and a list of pending changes the text would have made (`hp: 50 → 35`).
 
-Nothing is saved: variable macros (`{{setvar}}`, `{{incglobalvar}}`, …) write to a throwaway copy, and shorthand writes (`{{.x = 5}}`, `{{$y++}}`) are reverted immediately after each preview. One honest caveat: shorthand writes technically touch the real value for a split second before being restored — if some other extension reacts to variable changes instantly, it could notice. The "Reset sandbox" button discards all pending changes.
+Nothing is saved. Variable macros write to a throwaway copy, and shorthand writes (`{{.x = 5}}`, `{{$y++}}`) are reverted after each preview. One caveat: shorthand writes touch the real value for a split second, so another extension reacting to variable changes instantly could notice. "Reset sandbox" discards all pending changes.
+
+Results update as you type. Ctrl+Enter evaluates immediately.
 
 ## Slash commands
 
 | Command | What it does |
 |---|---|
 | `/me-workbench` | Opens the Workbench |
-| `/me-eval text` | Evaluates text through the engine (sandboxed; add `sandbox=false` to apply variable changes for real). Pipeable. |
+| `/me-eval text` | Evaluates text through the engine (sandboxed, add `sandbox=false` to apply variable changes for real). Pipeable. |
 | `/me-lore entry` | Returns a lorebook entry's raw content (`book=` to target a book). Pipeable. |
 | `/me-define` / `/me-undefine` | Create / remove custom macros from scripts |
 | `/me-macros` | Lists everything this extension registered |
 
 ## Good to know
 
-- **Name collisions:** if a future SillyBunny update ships a macro with the same name as one of ours, this extension steps aside automatically and re-registers as `{{me-name}}` instead (you'll see a note in the settings panel). Every macro also has a hidden `{{me-…}}` alias from day one — use those in prompts you want to be future-proof.
-- **`::` in arguments:** the engine uses `::` to separate arguments, so a literal `::` can't appear inside one.
-- **Uninstalling/disabling** removes every registered macro cleanly.
+- If a future SillyBunny update ships a macro with the same name as one of ours, this extension steps aside and renames its own to `{{me-name}}` (noted in the settings panel). Every macro also has a hidden `{{me-…}}` alias from day one, so prompts using those keep working after updates.
+- The engine uses `::` to separate arguments, so a literal `::` can't appear inside one.
+- Disabling or uninstalling removes every registered macro.
 
 ## Install
 
