@@ -1,5 +1,6 @@
 import { MODULE_NAME, getSettings, saveSettings } from '../settings.js';
 import { FALLBACK_PREFIX, RESERVED_NAMES } from '../registration.js';
+import { getChatState, touchChatState } from '../chat-state.js';
 
 // Mirrors MACRO_IDENTIFIER_PATTERN in the engine's MacroLexer.js (not imported to
 // avoid deep imports into SillyBunny internals).
@@ -7,6 +8,7 @@ export const NAME_PATTERN = /^[a-zA-Z][\w-]*$/;
 
 export const SCOPE_GLOBAL = 'global';
 export const SCOPE_CHARACTER = 'character';
+export const SCOPE_CHAT = 'chat';
 
 /**
  * @typedef {object} CustomMacroDef
@@ -99,9 +101,9 @@ export function validateDef(def, { siblings = [], registry = null, customNames =
     return problems;
 }
 
-/** Lowercased names of every custom def in both scopes, for validateDef's customNames. */
+/** Lowercased names of every custom def in all scopes, for validateDef's customNames. */
 export function getAllCustomNames() {
-    return [...getGlobalDefs(), ...getCharacterDefs()]
+    return [...getGlobalDefs(), ...getCharacterDefs(), ...getChatDefs()]
         .map(def => String(def.name ?? '').toLowerCase())
         .filter(Boolean);
 }
@@ -133,22 +135,39 @@ export async function saveCharacterDefs(defs) {
     await ctx.writeExtensionField(ctx.characterId, MODULE_NAME, { ...existing, customMacros: defs });
 }
 
+export function getChatDefs() {
+    return getChatState()?.customMacros ?? [];
+}
+
+/** Synchronous, unlike the character scope — chat metadata saves in the background. */
+export function saveChatDefs(defs) {
+    const state = getChatState();
+    if (!state) {
+        throw new Error('No chat is loaded.');
+    }
+    state.customMacros = defs;
+    touchChatState();
+}
+
 /**
  * The definitions that should currently be registered: enabled globals, with
- * enabled character defs overriding same-named globals.
+ * enabled character defs overriding same-named globals, and enabled chat defs
+ * overriding both (most specific wins).
  *
  * @returns {{def: CustomMacroDef, scope: string}[]}
  */
 export function getEffectiveDefs() {
     const byName = new Map();
-    for (const def of getGlobalDefs()) {
-        if (def.enabled && def.name) {
-            byName.set(def.name.toLowerCase(), { def, scope: SCOPE_GLOBAL });
-        }
-    }
-    for (const def of getCharacterDefs()) {
-        if (def.enabled && def.name) {
-            byName.set(def.name.toLowerCase(), { def, scope: SCOPE_CHARACTER });
+    const layers = [
+        [getGlobalDefs(), SCOPE_GLOBAL],
+        [getCharacterDefs(), SCOPE_CHARACTER],
+        [getChatDefs(), SCOPE_CHAT],
+    ];
+    for (const [defs, scope] of layers) {
+        for (const def of defs) {
+            if (def.enabled && def.name) {
+                byName.set(def.name.toLowerCase(), { def, scope });
+            }
         }
     }
     return [...byName.values()];

@@ -87,7 +87,46 @@ test('getEffectiveDefs: character defs override same-named globals; disabled def
     assert.equal(effective.find(({ def }) => def.name === 'other').scope, store.SCOPE_GLOBAL);
 });
 
-test('saveCharacterDefs requires a selected character', async () => {
+test('getEffectiveDefs: chat defs beat character AND global for the same name', async () => {
+    store.saveGlobalDefs([store.createDef({ name: 'greet', template: 'global greet' })]);
+    ctx.characterId = 0;
+    ctx.characters[0] = { data: { extensions: {} } };
+    await store.saveCharacterDefs([store.createDef({ name: 'greet', template: 'char greet' })]);
+    store.saveChatDefs([
+        store.createDef({ name: 'Greet', template: 'chat greet' }),
+        store.createDef({ name: 'chatonly', template: 'only here' }),
+    ]);
+
+    const effective = store.getEffectiveDefs();
+    assert.equal(effective.length, 2);
+    const greet = effective.find(({ def }) => def.name.toLowerCase() === 'greet');
+    assert.equal(greet.scope, store.SCOPE_CHAT);
+    assert.equal(greet.def.template, 'chat greet');
+    assert.equal(effective.find(({ def }) => def.name === 'chatonly').scope, store.SCOPE_CHAT);
+});
+
+test('chat defs live in chat metadata and follow the chat', () => {
+    store.saveChatDefs([store.createDef({ name: 'here', template: 'x' })]);
+    assert.equal(ctx.chatMetadata.MacroEnhanced.customMacros.length, 1, 'stored in the chat state');
+    assert.equal(store.getChatDefs().length, 1);
+    assert.ok(store.getAllCustomNames().includes('here'));
+
+    // A chat switch reassigns the metadata object; the defs must follow it.
+    ctx.chatMetadata = { variables: {} };
+    assert.deepEqual(store.getChatDefs(), [], 'fresh chat, no defs');
+});
+
+test('saveChatDefs queues a background metadata save', () => {
+    let saves = 0;
+    ({ ctx } = installStubContext({ registry, ctx: { saveMetadataDebounced: () => saves++ } }));
+    store.saveChatDefs([store.createDef({ name: 'x', template: 'y' })]);
+    assert.equal(saves, 1);
+});
+
+test('saveCharacterDefs requires a selected character; saveChatDefs requires a chat', async () => {
     ctx.characterId = undefined;
     await assert.rejects(() => store.saveCharacterDefs([]));
+
+    ({ ctx } = installStubContext({ registry, ctx: { chatId: undefined } }));
+    assert.throws(() => store.saveChatDefs([]), /No chat is loaded/);
 });
