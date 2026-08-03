@@ -174,6 +174,58 @@
     margin: 0;
 }
 
+.me-workbench-tabs {
+    display: flex;
+    gap: 6px;
+}
+
+.me-workbench-tab-active {
+    outline: 1px solid var(--SmartThemeQuoteColor, #7aa2f7);
+}
+
+.me-workbench-view {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+}
+
+/* ---- cache auditor ---- */
+
+.me-audit-intro,
+.me-audit-config,
+.me-audit-friendly {
+    font-size: calc(var(--mainFontSize, 1rem) * 0.9);
+    opacity: 0.85;
+}
+
+.me-audit-depth-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+}
+
+.me-audit-depth {
+    width: 5em;
+    flex: 0 0 auto;
+}
+
+.me-audit-clean {
+    color: var(--okGreen, #7cbe6c);
+}
+
+.me-audit-why {
+    opacity: 0.75;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+}
+
+.me-audit-running {
+    opacity: 0.7;
+}
+
 .me-workbench-columns {
     display: flex;
     gap: 12px;

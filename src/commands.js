@@ -7,6 +7,7 @@ import { SCOPE_CHARACTER, SCOPE_CHAT, SCOPE_GLOBAL, createDef, getAllCustomNames
 import { getRegisteredCustomNames, syncRegistrations } from './custom/registrar.js';
 import { createSandbox } from './workbench/sandbox.js';
 import { openWorkbench } from './workbench/panel.js';
+import { formatAuditReport, runAudit } from './auditor/audit.js';
 
 let commandsRegistered = false;
 let extensionActive = true;
@@ -241,6 +242,31 @@ export function registerCommands() {
             ],
             returns: 'a confirmation, or the list of stored values',
             helpString: 'Lists or removes values saved by {{freeze}}, {{sticky}}, {{daily}} and {{rollonce}} in this chat. Examples: <code>/me-unfreeze</code>, <code>/me-unfreeze opening-weather</code>, <code>/me-unfreeze all=true</code>',
+        }));
+
+        registerCommand(SlashCommand.fromProps({
+            name: 'me-audit',
+            callback: async () => {
+                if (!extensionActive) {
+                    return INACTIVE;
+                }
+                let sandboxEvaluate;
+                if (isEngineAvailable()) {
+                    const liveCtx = SillyTavern.getContext();
+                    const sandbox = createSandbox({
+                        getLocalStore: () => liveCtx.chatMetadata?.variables ?? {},
+                        getGlobalStore: () => liveCtx.extensionSettings?.variables?.global ?? {},
+                        getChatState: () => getChatState(),
+                    });
+                    sandboxEvaluate = (text) => sandbox.run(
+                        (input, dynamicMacros) => evaluateWithEngine(input, dynamicMacros, { meSandboxState: sandbox.chatState }),
+                        text);
+                }
+                const report = await runAudit({ sandboxEvaluate });
+                return formatAuditReport(report);
+            },
+            returns: 'a cache-audit report',
+            helpString: 'Scans presets, character card, persona, lorebooks and recent chat for macros that break the prompt-caching discount. Same report as the Workbench\'s Cache Audit tab.',
         }));
 
         registerCommand(SlashCommand.fromProps({
