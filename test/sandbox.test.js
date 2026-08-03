@@ -74,6 +74,15 @@ test('changes() reports deletes and omits no-op writes', () => {
     assert.deepEqual(store.changes().get('a'), { before: '1', after: undefined });
 });
 
+test('changes() compares by string value: numbers in the real store are not false positives', () => {
+    const real = { hp: 5, label: 7 };
+    const store = createSandboxStore(() => real);
+    store.set('hp', '5');
+    assert.equal(store.changes().size, 0, 'number 5 set to "5" is not a change');
+    store.set('label', '8');
+    assert.deepEqual(store.changes().get('label'), { before: 7, after: '8' });
+});
+
 test('dynamicMacros overrides read and write only the sandbox', () => {
     const localReal = { mood: 'calm' };
     const globalReal = { visits: '3' };

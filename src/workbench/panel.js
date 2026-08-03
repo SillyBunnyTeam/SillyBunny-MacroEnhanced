@@ -1,19 +1,49 @@
+import { isEngineAvailable } from '../engine-gate.js';
+import { button, el } from '../dom.js';
 import { createSandbox, findUnshadowedVariableMacros } from './sandbox.js';
 import { renderInspector } from './inspector.js';
 
 const EVAL_DEBOUNCE_MS = 300;
+const ENGINE_OFF_NOTICE = 'The Macro Workbench needs the Experimental Macro Engine. Turn it on under User Settings → Experimental Macro Engine.';
 
 let openPopup = null;
 
-function el(tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) {
-        node.className = className;
+async function copyToClipboard(text) {
+    try {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+    } catch {
+        // Insecure origin or permission denied — try the legacy path.
     }
-    if (text !== undefined) {
-        node.textContent = text;
+    try {
+        const scratch = document.createElement('textarea');
+        scratch.value = text;
+        scratch.style.position = 'fixed';
+        scratch.style.opacity = '0';
+        document.body.appendChild(scratch);
+        scratch.select();
+        const ok = document.execCommand('copy');
+        scratch.remove();
+        return ok;
+    } catch {
+        return false;
     }
-    return node;
+}
+
+function flashButtonText(node, text, revertMs = 1500) {
+    if (node.dataset.flashTimer) {
+        clearTimeout(Number(node.dataset.flashTimer));
+    } else {
+        node.dataset.originalText = node.textContent;
+    }
+    node.textContent = text;
+    node.dataset.flashTimer = String(setTimeout(() => {
+        node.textContent = node.dataset.originalText ?? text;
+        delete node.dataset.flashTimer;
+        delete node.dataset.originalText;
+    }, revertMs));
 }
 
 function evaluateSandboxed(ctx, sandbox, input) {
@@ -50,6 +80,10 @@ export function closeWorkbench() {
 export async function openWorkbench({ initialText = '' } = {}) {
     const ctx = SillyTavern.getContext();
     if (openPopup) {
+        return;
+    }
+    if (!isEngineAvailable()) {
+        await ctx.Popup?.show?.text?.('Macro Workbench', ENGINE_OFF_NOTICE);
         return;
     }
 
@@ -100,11 +134,14 @@ export async function openWorkbench({ initialText = '' } = {}) {
     left.appendChild(output);
 
     const buttonRow = el('div', 'me-workbench-buttons');
-    const copyButton = el('div', 'menu_button', 'Copy result');
-    copyButton.addEventListener('click', () => {
-        navigator.clipboard?.writeText(output.textContent ?? '').catch(() => {});
+    const copyButton = button('menu_button', 'Copy result', async () => {
+        const ok = await copyToClipboard(output.textContent ?? '');
+        flashButtonText(copyButton, ok ? 'Copied ✓' : 'Copy failed');
     });
-    const resetButton = el('div', 'menu_button', 'Reset sandbox');
+    const resetButton = button('menu_button', 'Reset sandbox', () => {
+        sandbox.reset();
+        evaluateNow();
+    });
     buttonRow.appendChild(copyButton);
     buttonRow.appendChild(resetButton);
     left.appendChild(buttonRow);
@@ -113,7 +150,7 @@ export async function openWorkbench({ initialText = '' } = {}) {
     right.appendChild(inspectorContainer);
 
     root.appendChild(el('div', 'me-workbench-footnote',
-        'Sandboxed — nothing is saved. Variable macros write to a throwaway copy; {{.var}} shorthand changes are reverted after each preview.'));
+        'Sandboxed — nothing is saved. Variable macros write to a throwaway copy; {{.var}} shorthand changes are reverted after each preview. Ctrl+Enter evaluates immediately.'));
 
     const refreshInspector = () => {
         const liveCtx = SillyTavern.getContext();
@@ -150,10 +187,12 @@ export async function openWorkbench({ initialText = '' } = {}) {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(evaluateNow, EVAL_DEBOUNCE_MS);
     });
-
-    resetButton.addEventListener('click', () => {
-        sandbox.reset();
-        evaluateNow();
+    input.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+            event.preventDefault();
+            clearTimeout(debounceTimer);
+            evaluateNow();
+        }
     });
 
     refreshInspector();

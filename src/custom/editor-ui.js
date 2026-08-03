@@ -2,6 +2,7 @@ import {
     SCOPE_CHARACTER,
     SCOPE_GLOBAL,
     createDef,
+    getAllCustomNames,
     getCharacterDefs,
     getGlobalDefs,
     saveCharacterDefs,
@@ -9,17 +10,9 @@ import {
     validateDef,
 } from './store.js';
 import { syncRegistrations } from './registrar.js';
+import { button, el } from '../dom.js';
 
-function el(tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) {
-        node.className = className;
-    }
-    if (text !== undefined) {
-        node.textContent = text;
-    }
-    return node;
-}
+const VALIDATE_DEBOUNCE_MS = 300;
 
 function scopeLabel(scope) {
     return scope === SCOPE_CHARACTER ? 'Character' : 'Global';
@@ -36,6 +29,14 @@ async function persist(scope, defs) {
 
 function defsForScope(scope) {
     return scope === SCOPE_CHARACTER ? getCharacterDefs() : getGlobalDefs();
+}
+
+/** A <label> wrapping the input, so the caption reads and clicks as its label. */
+function labeledField(caption, inputEl) {
+    const wrap = el('label', 'me-custom-field');
+    wrap.appendChild(el('span', 'me-custom-label', caption));
+    wrap.appendChild(inputEl);
+    return wrap;
 }
 
 /**
@@ -76,9 +77,17 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
         enabled.type = 'checkbox';
         enabled.checked = def.enabled !== false;
         enabled.title = 'Enabled';
+        enabled.setAttribute('aria-label', `Enable {{${def.name}}}`);
         enabled.addEventListener('change', async () => {
+            const previous = def.enabled;
             def.enabled = enabled.checked;
-            await persist(scope, defsForScope(scope));
+            try {
+                await persist(scope, defsForScope(scope));
+            } catch (error) {
+                def.enabled = previous;
+                enabled.checked = previous !== false;
+                console.warn(`[Macro Enhanced] Failed to save the enabled state of {{${def.name}}}.`, error);
+            }
         });
         row.appendChild(enabled);
 
@@ -88,22 +97,26 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
             row.appendChild(el('span', 'me-custom-desc', def.description));
         }
 
-        const editButton = el('div', 'menu_button me-custom-button', 'Edit');
-        editButton.addEventListener('click', () => openEditor(def, scope));
-        row.appendChild(editButton);
+        row.appendChild(button('menu_button me-custom-button', 'Edit', () => openEditor(def, scope)));
 
-        const deleteButton = el('div', 'menu_button me-custom-button', 'Delete');
-        deleteButton.addEventListener('click', async () => {
+        row.appendChild(button('menu_button me-custom-button', 'Delete', async () => {
             const ctx = SillyTavern.getContext();
-            const confirmed = await ctx.Popup.show?.confirm?.('Delete custom macro', `Delete {{${def.name}}}?`)
-                ?? globalThis.confirm(`Delete {{${def.name}}}?`);
+            const confirmFn = ctx.Popup?.show?.confirm;
+            // POPUP_RESULT: yes=1, no=0, Escape=null — only a truthy result may delete.
+            const confirmed = confirmFn
+                ? !!(await confirmFn('Delete custom macro', `Delete {{${def.name}}}?`))
+                : globalThis.confirm(`Delete {{${def.name}}}?`);
             if (!confirmed) {
                 return;
             }
-            await persist(scope, defsForScope(scope).filter(other => other.id !== def.id));
+            try {
+                await persist(scope, defsForScope(scope).filter(other => other.id !== def.id));
+            } catch (error) {
+                await ctx.Popup?.show?.text?.('Macro Enhanced', `Deleting failed: ${error?.message ?? error}`);
+                return;
+            }
             refreshList();
-        });
-        row.appendChild(deleteButton);
+        }));
 
         return row;
     };
@@ -112,31 +125,65 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
         editorHost.innerHTML = '';
         const def = createDef(existingDef ? structuredClone(existingDef) : {});
         let scope = existingScope ?? SCOPE_GLOBAL;
+        /** Scope the def is currently saved under; null until its first save. */
+        let persistedScope = existingDef ? (existingScope ?? null) : null;
 
         const form = el('div', 'me-custom-editor');
-        form.appendChild(el('div', 'me-custom-editor-title', existingDef ? `Edit {{${def.name}}}` : 'New macro'));
+        const title = el('div', 'me-custom-editor-title', existingDef ? `Edit {{${def.name}}}` : 'New macro');
+        form.appendChild(title);
 
         const nameInput = document.createElement('input');
         nameInput.className = 'text_pole';
-        nameInput.placeholder = 'Name — you will type {{name}} in prompts';
+        nameInput.placeholder = 'e.g. greet — used as {{greet}} in prompts';
         nameInput.value = def.name;
-        form.appendChild(nameInput);
+        form.appendChild(labeledField('Name', nameInput));
 
         const descInput = document.createElement('input');
         descInput.className = 'text_pole';
-        descInput.placeholder = 'Description (shown in the macro help browser)';
+        descInput.placeholder = 'Shown in the macro help browser';
         descInput.value = def.description;
-        form.appendChild(descInput);
+        form.appendChild(labeledField('Description', descInput));
 
         const templateInput = document.createElement('textarea');
         templateInput.className = 'text_pole me-custom-template';
         templateInput.rows = 4;
         templateInput.placeholder = 'What the macro expands to. Other macros work here, e.g.:\nMy {{mood}} greeting for {{user}}';
         templateInput.value = def.template;
-        form.appendChild(templateInput);
+        form.appendChild(labeledField('Template', templateInput));
 
         form.appendChild(el('div', 'me-custom-hint',
             'Arguments: add names below, then use {{argname}} (or {{arg1}}, {{arg2}}, …) inside the template. Callers pass them as {{yourmacro::value1::value2}}.'));
+
+        const problems = el('div', 'me-custom-problems');
+
+        // Live validation while typing; also run by the args UI and scope select.
+        let validateTimer = null;
+        const validateLive = () => {
+            const name = nameInput.value.trim();
+            if (!name) {
+                problems.textContent = '';
+                return;
+            }
+            const ctx = SillyTavern.getContext();
+            const candidate = {
+                ...def,
+                name,
+                // A still-empty template shouldn't nag while the name is being typed.
+                template: templateInput.value.trim() || 'placeholder',
+                args: def.args.filter(arg => String(arg.name ?? '').trim()),
+            };
+            const siblings = defsForScope(scope).filter(other => other.id !== def.id);
+            const errors = validateDef(candidate, { siblings, registry: ctx.macros?.registry, customNames: getAllCustomNames() });
+            const filtered = existingDef && existingDef.name === name
+                ? errors.filter(problem => !problem.includes('already exists'))
+                : errors;
+            problems.textContent = filtered.join(' ');
+        };
+        const scheduleValidation = () => {
+            clearTimeout(validateTimer);
+            validateTimer = setTimeout(validateLive, VALIDATE_DEBOUNCE_MS);
+        };
+        nameInput.addEventListener('input', scheduleValidation);
 
         const argsHost = el('div', 'me-custom-args');
         const renderArgs = () => {
@@ -147,38 +194,47 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
                 const argName = document.createElement('input');
                 argName.className = 'text_pole';
                 argName.placeholder = 'argument name';
+                argName.setAttribute('aria-label', `Argument ${index + 1} name`);
                 argName.value = arg.name ?? '';
-                argName.addEventListener('input', () => { arg.name = argName.value; });
+                argName.addEventListener('input', () => {
+                    arg.name = argName.value;
+                    scheduleValidation();
+                });
                 argRow.appendChild(argName);
 
                 const optional = document.createElement('input');
                 optional.type = 'checkbox';
                 optional.checked = !!arg.optional;
                 optional.title = 'Optional';
-                optional.addEventListener('change', () => { arg.optional = optional.checked; });
+                optional.setAttribute('aria-label', `Argument ${index + 1} is optional`);
+                optional.addEventListener('change', () => {
+                    arg.optional = optional.checked;
+                    scheduleValidation();
+                });
                 argRow.appendChild(optional);
                 argRow.appendChild(el('span', 'me-custom-arg-label', 'optional'));
 
                 const defaultValue = document.createElement('input');
                 defaultValue.className = 'text_pole';
                 defaultValue.placeholder = 'default (if optional)';
+                defaultValue.setAttribute('aria-label', `Argument ${index + 1} default value`);
                 defaultValue.value = arg.defaultValue ?? '';
                 defaultValue.addEventListener('input', () => { arg.defaultValue = defaultValue.value; });
                 argRow.appendChild(defaultValue);
 
-                const removeArg = el('div', 'menu_button me-custom-button', '×');
-                removeArg.title = 'Remove argument';
-                removeArg.addEventListener('click', () => {
+                const removeArg = button('menu_button me-custom-button', '×', () => {
                     def.args.splice(index, 1);
                     renderArgs();
+                    scheduleValidation();
                 });
+                removeArg.title = 'Remove argument';
+                removeArg.setAttribute('aria-label', `Remove argument ${index + 1}`);
                 argRow.appendChild(removeArg);
 
                 argsHost.appendChild(argRow);
             });
 
-            const addArg = el('div', 'menu_button me-custom-button', '+ Add argument');
-            addArg.addEventListener('click', () => {
+            const addArg = button('menu_button me-custom-button', '+ Add argument', () => {
                 def.args.push({ name: '', optional: false, defaultValue: '' });
                 renderArgs();
             });
@@ -187,7 +243,7 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
         renderArgs();
         form.appendChild(argsHost);
 
-        const scopeRow = el('div', 'me-custom-scope-row');
+        const scopeRow = el('label', 'me-custom-scope-row');
         scopeRow.appendChild(el('span', undefined, 'Saved for: '));
         const scopeSelect = document.createElement('select');
         scopeSelect.className = 'text_pole';
@@ -198,76 +254,99 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
             scopeSelect.appendChild(option);
         }
         scopeSelect.value = scope;
-        scopeSelect.addEventListener('change', () => { scope = scopeSelect.value; });
+        scopeSelect.addEventListener('change', () => {
+            scope = scopeSelect.value;
+            validateLive();
+        });
         scopeRow.appendChild(scopeSelect);
         form.appendChild(scopeRow);
 
-        const problems = el('div', 'me-custom-problems');
         form.appendChild(problems);
 
-        const buttons = el('div', 'me-custom-editor-buttons');
-        const saveButton = el('div', 'menu_button', 'Save');
-        saveButton.addEventListener('click', async () => {
+        /** Validates and persists the editor state. Returns false (with a message) on any problem. */
+        const doSave = async () => {
             def.name = nameInput.value.trim();
             def.description = descInput.value.trim();
             def.template = templateInput.value;
             def.args = def.args.filter(arg => String(arg.name ?? '').trim());
+            renderArgs();
 
             const ctx = SillyTavern.getContext();
-            if (scope === SCOPE_CHARACTER && (ctx.characterId === undefined || ctx.characterId === null)) {
+            const noCharacter = ctx.characterId === undefined || ctx.characterId === null;
+            if (noCharacter && scope === SCOPE_CHARACTER) {
                 problems.textContent = 'Open a character chat first to save a character-scoped macro.';
-                return;
+                return false;
+            }
+            if (noCharacter && persistedScope === SCOPE_CHARACTER && persistedScope !== scope) {
+                problems.textContent = 'Open the character this macro belongs to before moving it to another scope.';
+                return false;
             }
 
             const siblings = defsForScope(scope).filter(other => other.id !== def.id);
-            const errors = validateDef(def, { siblings, registry: ctx.macros?.registry });
+            const errors = validateDef(def, { siblings, registry: ctx.macros?.registry, customNames: getAllCustomNames() });
             // When editing an existing macro of ours, its own live registration is fine.
             const filteredErrors = existingDef && existingDef.name === def.name
                 ? errors.filter(problem => !problem.includes('already exists'))
                 : errors;
             if (filteredErrors.length) {
                 problems.textContent = filteredErrors.join(' ');
-                return;
+                return false;
             }
 
             const scopeDefs = defsForScope(scope).filter(other => other.id !== def.id);
             scopeDefs.push(def);
 
-            // Moving between scopes removes the def from its previous home.
-            if (existingDef && existingScope && existingScope !== scope) {
-                await persist(existingScope, defsForScope(existingScope).filter(other => other.id !== def.id));
+            try {
+                // Moving between scopes removes the def from its previous home.
+                if (persistedScope && persistedScope !== scope) {
+                    await persist(persistedScope, defsForScope(persistedScope).filter(other => other.id !== def.id));
+                }
+                await persist(scope, scopeDefs);
+            } catch (error) {
+                problems.textContent = `Saving failed: ${error?.message ?? error}`;
+                return false;
             }
-            await persist(scope, scopeDefs);
 
-            editorHost.innerHTML = '';
-            refreshList();
-        });
-        buttons.appendChild(saveButton);
+            persistedScope = scope;
+            title.textContent = `Edit {{${def.name}}}`;
+            problems.textContent = '';
+            return true;
+        };
+
+        const buttons = el('div', 'me-custom-editor-buttons');
+        buttons.appendChild(button('menu_button', 'Save', async () => {
+            if (await doSave()) {
+                clearTimeout(validateTimer);
+                editorHost.innerHTML = '';
+                refreshList();
+            }
+        }));
 
         if (typeof onTestInWorkbench === 'function') {
-            const testButton = el('div', 'menu_button', 'Test in Workbench');
-            testButton.addEventListener('click', () => {
+            const testButton = button('menu_button', 'Test in Workbench', async () => {
+                // Saves first, so the Workbench always tests exactly what is typed here.
+                if (!(await doSave())) {
+                    return;
+                }
+                refreshList();
                 const requiredArgs = (def.args ?? []).filter(arg => !arg.optional);
-                onTestInWorkbench(`{{${nameInput.value.trim() || def.name}${requiredArgs.map(arg => `::${arg.name}`).join('')}}}`);
+                onTestInWorkbench(`{{${def.name}${requiredArgs.map(arg => `::${arg.name}`).join('')}}}`);
             });
+            testButton.title = 'Saves the macro, then opens it in the Workbench';
             buttons.appendChild(testButton);
         }
 
-        const cancelButton = el('div', 'menu_button', 'Cancel');
-        cancelButton.addEventListener('click', () => {
+        buttons.appendChild(button('menu_button', 'Cancel', () => {
+            clearTimeout(validateTimer);
             editorHost.innerHTML = '';
-        });
-        buttons.appendChild(cancelButton);
+        }));
 
         form.appendChild(buttons);
         editorHost.appendChild(form);
         nameInput.focus();
     };
 
-    const newButton = el('div', 'menu_button', 'New macro');
-    newButton.addEventListener('click', () => openEditor(null, SCOPE_GLOBAL));
-
-    container.appendChild(newButton);
+    container.appendChild(button('menu_button', 'New macro', () => openEditor(null, SCOPE_GLOBAL)));
     container.appendChild(list);
     container.appendChild(editorHost);
     refreshList();

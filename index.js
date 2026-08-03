@@ -12,6 +12,14 @@ import { closeWorkbench } from './src/workbench/panel.js';
 const subscriptions = [];
 let initialized = false;
 let macrosRegistered = false;
+/** @type {boolean|null} engine availability at the last drawer render */
+let lastRenderedAvailability = null;
+
+function renderDrawerTracked() {
+    const engineAvailable = isEngineAvailable();
+    lastRenderedAvailability = engineAvailable;
+    renderDrawer({ engineAvailable });
+}
 
 function subscribe(eventType, handler) {
     if (!eventType) {
@@ -39,7 +47,7 @@ export function init() {
         setCommandsActive(true);
         activateMacros();
         registerCommands();
-        renderDrawer({ engineAvailable: isEngineAvailable() });
+        renderDrawerTracked();
         return;
     }
 
@@ -51,7 +59,7 @@ export function init() {
     getSettings();
     activateMacros();
     registerCommands();
-    renderDrawer({ engineAvailable: isEngineAvailable() });
+    renderDrawerTracked();
 
     subscribe(events.APP_READY, () => {
         if (!initialized) {
@@ -59,13 +67,15 @@ export function init() {
         }
         activateMacros();
         registerCommands();
-        renderDrawer({ engineAvailable: isEngineAvailable() });
+        renderDrawerTracked();
         if (macrosRegistered) {
             prewarm(SillyTavern.getContext());
         }
     });
 
-    // Hot-activate when the experimental engine flag is switched on after boot.
+    // Hot-activate when the experimental engine flag is switched on after boot, and
+    // re-render whenever availability changes in either direction (macros stay
+    // registered while the flag is off, so macrosRegistered can't track this).
     subscribe(events.SETTINGS_UPDATED, () => {
         if (!initialized) {
             return;
@@ -73,9 +83,9 @@ export function init() {
         const available = isEngineAvailable();
         if (available && !macrosRegistered) {
             activateMacros();
-            renderDrawer({ engineAvailable: true });
-        } else if (!available && macrosRegistered) {
-            renderDrawer({ engineAvailable: false });
+        }
+        if (available !== lastRenderedAvailability) {
+            renderDrawerTracked();
         }
     });
 
@@ -88,7 +98,7 @@ export function init() {
         prewarm(liveCtx);
         // Character-scoped custom macros follow the chat.
         syncRegistrations();
-        renderDrawer({ engineAvailable: true });
+        renderDrawerTracked();
     });
 
     subscribe(events.WORLDINFO_SETTINGS_UPDATED, () => {
@@ -121,6 +131,7 @@ export function deactivate() {
     teardownCustomRegistrations();
     teardownRegistrations();
     macrosRegistered = false;
+    lastRenderedAvailability = null;
     clearCache();
     removeDrawer();
 

@@ -1,6 +1,7 @@
+import { isEngineAvailable } from './engine-gate.js';
 import { getRegisteredNames } from './registration.js';
 import { findEntry } from './lorebook-cache.js';
-import { SCOPE_CHARACTER, SCOPE_GLOBAL, createDef, getCharacterDefs, getGlobalDefs, saveCharacterDefs, saveGlobalDefs, validateDef } from './custom/store.js';
+import { SCOPE_CHARACTER, SCOPE_GLOBAL, createDef, getAllCustomNames, getCharacterDefs, getGlobalDefs, saveCharacterDefs, saveGlobalDefs, validateDef } from './custom/store.js';
 import { getRegisteredCustomNames, syncRegistrations } from './custom/registrar.js';
 import { createSandbox } from './workbench/sandbox.js';
 import { openWorkbench } from './workbench/panel.js';
@@ -15,6 +16,7 @@ export function setCommandsActive(value) {
 }
 
 const INACTIVE = 'Macro Enhanced is inactive.';
+const ENGINE_OFF = 'Macro Enhanced needs the Experimental Macro Engine enabled (User Settings → Experimental Macro Engine).';
 
 function evaluateWithEngine(text, dynamicMacros = {}) {
     const ctx = SillyTavern.getContext();
@@ -69,6 +71,9 @@ export function registerCommands() {
                 if (!extensionActive) {
                     return INACTIVE;
                 }
+                if (!isEngineAvailable()) {
+                    return ENGINE_OFF;
+                }
                 openWorkbench();
                 return '';
             },
@@ -80,6 +85,9 @@ export function registerCommands() {
             callback: (named, unnamed) => {
                 if (!extensionActive) {
                     return INACTIVE;
+                }
+                if (!isEngineAvailable()) {
+                    return ENGINE_OFF;
                 }
                 const text = String(unnamed ?? '');
                 if (!text) {
@@ -168,7 +176,7 @@ export function registerCommands() {
                 const def = createDef({ ...(existing ?? {}), name, template, args });
 
                 const siblings = defs.filter(other => other.id !== def.id);
-                const errors = validateDef(def, { siblings, registry: liveCtx.macros?.registry })
+                const errors = validateDef(def, { siblings, registry: liveCtx.macros?.registry, customNames: getAllCustomNames() })
                     .filter(problem => !(existing && problem.includes('already exists')));
                 if (errors.length) {
                     return errors.join(' ');

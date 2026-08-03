@@ -27,15 +27,34 @@ test('validateDef rejects bad names, empty templates and reserved names', () => 
         .some(problem => problem.includes('reserved')));
 });
 
-test('validateDef refuses names owned by other sources but allows our own', () => {
+test('validateDef refuses names owned by other sources', () => {
     registry.setSource('core');
     registry.registerMacro('roll', { handler: () => '' });
-    registry.setSource('MacroEnhanced');
-    registry.registerMacro('mine', { handler: () => '' });
 
     assert.ok(store.validateDef(store.createDef({ name: 'roll', template: 'x' }), { registry })
         .some(problem => problem.includes('already exists')));
-    assert.deepEqual(store.validateDef(store.createDef({ name: 'mine', template: 'x' }), { registry }), []);
+});
+
+test('validateDef refuses our own built-in names but allows known custom defs', () => {
+    registry.setSource('MacroEnhanced');
+    registry.registerMacro('upper', { handler: () => '' });
+    registry.registerMacro('mine', { handler: () => '' });
+
+    // "upper" is ours in the registry but NOT a custom def -> it is a built-in; refuse.
+    assert.ok(store.validateDef(store.createDef({ name: 'upper', template: 'x' }), { registry, customNames: ['mine'] })
+        .some(problem => problem.includes('built-in')));
+    // "mine" is ours AND a known custom def (edit / char-overrides-global) -> fine.
+    assert.deepEqual(store.validateDef(store.createDef({ name: 'mine', template: 'x' }), { registry, customNames: ['mine'] }), []);
+    // Without customNames, an entry we own counts as built-in.
+    assert.ok(store.validateDef(store.createDef({ name: 'mine', template: 'x' }), { registry })
+        .some(problem => problem.includes('built-in')));
+});
+
+test('validateDef refuses the me- fallback prefix', () => {
+    assert.ok(store.validateDef(store.createDef({ name: 'me-upper', template: 'x' }), {})
+        .some(problem => problem.includes('me-')));
+    assert.ok(store.validateDef(store.createDef({ name: 'ME-thing', template: 'x' }), {})
+        .some(problem => problem.includes('me-')));
 });
 
 test('validateDef enforces sibling uniqueness and arg rules', () => {

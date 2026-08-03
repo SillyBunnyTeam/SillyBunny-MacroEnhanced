@@ -1,19 +1,9 @@
 import { getRemaps } from './registration.js';
 import { renderCustomMacroManager } from './custom/editor-ui.js';
 import { openWorkbench } from './workbench/panel.js';
+import { button, el } from './dom.js';
 
 const DRAWER_ID = 'me-settings-drawer';
-
-function el(tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) {
-        node.className = className;
-    }
-    if (text !== undefined) {
-        node.textContent = text;
-    }
-    return node;
-}
 
 function findHost() {
     return document.getElementById('extensions_settings2') ?? document.getElementById('extensions_settings');
@@ -56,9 +46,7 @@ export function renderDrawer({ engineAvailable }) {
         return;
     }
 
-    const workbenchButton = el('div', 'menu_button', 'Open Macro Workbench');
-    workbenchButton.addEventListener('click', () => openWorkbench());
-    content.appendChild(workbenchButton);
+    content.appendChild(button('menu_button', 'Open Macro Workbench', () => openWorkbench()));
 
     content.appendChild(el('div', 'me-drawer-hint', 'All macros from this extension are listed under the "enhanced-…" groups in /help macros.'));
 

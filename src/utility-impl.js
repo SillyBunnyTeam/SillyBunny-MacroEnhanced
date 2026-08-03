@@ -320,6 +320,9 @@ function parseJsonPath(path) {
             continue;
         }
         const match = /^[^.[\]]+/.exec(src.slice(i));
+        if (!match) {
+            throw new JsonPathError(`Unexpected "${ch}" in path at position ${i}`);
+        }
         segments.push(match[0]);
         i += match[0].length;
     }

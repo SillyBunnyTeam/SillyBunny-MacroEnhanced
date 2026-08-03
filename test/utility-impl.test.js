@@ -117,4 +117,8 @@ test('jsonGet reads dot and bracket paths', () => {
 test('jsonGet throws JsonPathError on malformed input', () => {
     assert.throws(() => jsonGet('not json', 'a'), JsonPathError);
     assert.throws(() => jsonGet('{}', 'a[unclosed'), JsonPathError);
+    // A "]" at a segment start must not escape as a raw TypeError.
+    assert.throws(() => jsonGet('{"a":1}', 'a]b'), JsonPathError);
+    assert.throws(() => jsonGet('{"a":1}', ']'), JsonPathError);
+    assert.throws(() => jsonGet('{"a":1}', 'a.]'), JsonPathError);
 });

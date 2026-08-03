@@ -10,6 +10,8 @@ const books = new Map();
 let activeEntries = [];
 /** @type {Set<string>} loads currently in flight, keyed by book name */
 const loading = new Set();
+/** @type {Set<string>} books whose last load failed — not retried until the next prewarm */
+const failed = new Set();
 
 function normalizeTitle(value) {
     return String(value ?? '').trim().toLowerCase();
@@ -27,6 +29,7 @@ export function indexBook(name, data) {
         }
     }
     books.set(name, { entries, byUid, byTitle });
+    failed.delete(name);
 }
 
 export function forgetBook(name) {
@@ -37,6 +40,7 @@ export function clearCache() {
     books.clear();
     activeEntries = [];
     loading.clear();
+    failed.clear();
 }
 
 export function setActiveEntries(entries) {
@@ -98,10 +102,12 @@ export function computePrewarmNames(ctx) {
 }
 
 /**
- * Loads a single book into the cache in the background. Safe to call repeatedly.
+ * Loads a single book into the cache in the background. Safe to call repeatedly:
+ * a failed load is remembered so per-evaluation lookups don't hammer the server —
+ * the next prewarm (chat change, World Info settings change) retries.
  */
 export function warmBook(ctx, name) {
-    if (!name || books.has(name) || loading.has(name)) {
+    if (!name || books.has(name) || loading.has(name) || failed.has(name)) {
         return;
     }
     loading.add(name);
@@ -109,13 +115,19 @@ export function warmBook(ctx, name) {
         .then((data) => {
             if (data) {
                 indexBook(name, data);
+            } else {
+                failed.add(name);
             }
         })
-        .catch((error) => console.warn(`[Macro Enhanced] Failed to load lorebook "${name}"`, error))
+        .catch((error) => {
+            failed.add(name);
+            console.warn(`[Macro Enhanced] Failed to load lorebook "${name}"`, error);
+        })
         .finally(() => loading.delete(name));
 }
 
 export function prewarm(ctx) {
+    failed.clear();
     for (const name of computePrewarmNames(ctx)) {
         warmBook(ctx, name);
     }

@@ -1,5 +1,5 @@
 import { MODULE_NAME, getSettings, saveSettings } from '../settings.js';
-import { RESERVED_NAMES } from '../registration.js';
+import { FALLBACK_PREFIX, RESERVED_NAMES } from '../registration.js';
 
 // Mirrors MACRO_IDENTIFIER_PATTERN in the engine's MacroLexer.js (not imported to
 // avoid deep imports into SillyBunny internals).
@@ -37,9 +37,13 @@ export function createDef(partial = {}) {
  * @param {object} options
  * @param {CustomMacroDef[]} options.siblings - Other defs in the same scope (for uniqueness).
  * @param {object|null} options.registry - Engine registry, to refuse names owned by others.
+ * @param {string[]} options.customNames - Lowercased names of custom defs in BOTH scopes.
+ *        A registry entry we own is only acceptable when it is one of these (an edit of
+ *        this def, or the char-overrides-global case) — otherwise it is a built-in macro
+ *        of this extension and taking the name would clobber it.
  * @returns {string[]} Human-readable problems; empty when valid.
  */
-export function validateDef(def, { siblings = [], registry = null } = {}) {
+export function validateDef(def, { siblings = [], registry = null, customNames = [] } = {}) {
     const problems = [];
     const name = String(def.name ?? '').trim();
 
@@ -49,6 +53,8 @@ export function validateDef(def, { siblings = [], registry = null } = {}) {
         problems.push('Names must start with a letter and only use letters, numbers, hyphens and underscores.');
     } else if (RESERVED_NAMES.includes(name.toLowerCase())) {
         problems.push(`"${name}" is reserved for a future SillyBunny update — pick another name.`);
+    } else if (name.toLowerCase().startsWith(FALLBACK_PREFIX)) {
+        problems.push(`Names starting with "${FALLBACK_PREFIX}" are reserved for collision-proof aliases — pick another name.`);
     }
 
     if (name && siblings.some(other => other.id !== def.id && String(other.name).toLowerCase() === name.toLowerCase())) {
@@ -59,6 +65,8 @@ export function validateDef(def, { siblings = [], registry = null } = {}) {
         const owner = registry.getMacro(name)?.source?.name ?? '';
         if (String(owner).toLowerCase() !== MODULE_NAME.toLowerCase()) {
             problems.push(`"${name}" already exists (${owner || 'built-in'}) — pick another name.`);
+        } else if (!customNames.includes(name.toLowerCase())) {
+            problems.push(`"${name}" is one of Macro Enhanced's built-in macros — pick another name.`);
         }
     }
 
@@ -89,6 +97,13 @@ export function validateDef(def, { siblings = [], registry = null } = {}) {
     }
 
     return problems;
+}
+
+/** Lowercased names of every custom def in both scopes, for validateDef's customNames. */
+export function getAllCustomNames() {
+    return [...getGlobalDefs(), ...getCharacterDefs()]
+        .map(def => String(def.name ?? '').toLowerCase())
+        .filter(Boolean);
 }
 
 // ---------- persistence ----------

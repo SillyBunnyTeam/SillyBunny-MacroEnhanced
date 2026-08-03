@@ -67,7 +67,9 @@ Books load in the background. In a freshly opened chat the very first evaluation
 
 Open **Extensions → Macro Enhanced → Your custom macros**. A macro is a name plus a template — the text it expands to, which can use any other macros. Add arguments if you want them: an argument named `who` is available inside the template as `{{who}}` (or `{{arg1}}`, `{{arg2}}`, … by position), and callers pass values with `{{yourmacro::value1::value2}}`. Optional arguments can have defaults.
 
-Macros are saved globally or for the current character only (character macros win when names clash, and travel with the chat). Everything appears in `/help macros` under *enhanced-custom* with your description.
+Macros are saved globally or for the current character only (character macros win when names clash, and travel with the chat). Everything appears in `/help macros` under *enhanced-custom* with your description. Names are checked as you type: you can't take a name that belongs to another extension, to one of Macro Enhanced's own built-ins, or that starts with the reserved `me-` prefix.
+
+**Test in Workbench** saves the macro first (running the same checks as Save), then opens it in the Workbench — so you always test exactly what you typed.
 
 From scripts: `/me-define name=greet args=who Hello {{who}}!` and `/me-undefine greet`.
 
@@ -75,7 +77,7 @@ Self-referencing macros are stopped automatically (with a console warning) inste
 
 ## Macro Workbench
 
-Open it from the extension's settings panel or with `/me-workbench`. Type on the left, see the fully evaluated result live on the right — plus every chat and global variable, and a **pending changes** list showing what the text *would* have changed (`hp: 50 → 35`).
+Open it from the extension's settings panel or with `/me-workbench`. Type on the left, see the fully evaluated result live on the right — plus every chat and global variable, and a **pending changes** list showing what the text *would* have changed (`hp: 50 → 35`). Results update as you type; Ctrl+Enter evaluates immediately, and **Copy result** confirms with a "Copied ✓".
 
 Nothing is saved: variable macros (`{{setvar}}`, `{{incglobalvar}}`, …) write to a throwaway copy, and shorthand writes (`{{.x = 5}}`, `{{$y++}}`) are reverted immediately after each preview. One honest caveat: shorthand writes technically touch the real value for a split second before being restored — if some other extension reacts to variable changes instantly, it could notice. The "Reset sandbox" button discards all pending changes.
 

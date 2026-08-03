@@ -90,9 +90,12 @@ export function registerLorebookMacros() {
         ],
         description: 'Checks whether a lorebook entry exists. Returns "true" or "false".',
         exampleUsage: ['{{if {{loreexists::Backstory}}}}...{{/if}}'],
-        handler: ({ unnamedArgs: [entryName, bookName] }) => {
+        handler: ({ unnamedArgs: [entryName, bookName], warn }) => {
             const ctx = SillyTavern.getContext();
-            const { entry } = findEntry(ctx, entryName, bookName || undefined);
+            const { entry, missing } = findEntry(ctx, entryName, bookName || undefined);
+            if (!entry && missing.length) {
+                warn(`Lorebook${missing.length > 1 ? 's' : ''} ${missing.map(name => `"${name}"`).join(', ')} not loaded yet — "false" may be wrong until then.`);
+            }
             return entry ? 'true' : 'false';
         },
     });

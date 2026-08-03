@@ -92,7 +92,8 @@ export function createSandboxStore(getRealStore) {
             for (const [name, value] of overlay) {
                 const before = Object.hasOwn(real, name) ? real[name] : undefined;
                 const after = value === DELETED ? undefined : value;
-                if (before !== after) {
+                // String-compare like diffObjects: real stores may hold numbers.
+                if (String(before) !== String(after) || (before === undefined) !== (after === undefined)) {
                     result.set(name, { before, after });
                 }
             }

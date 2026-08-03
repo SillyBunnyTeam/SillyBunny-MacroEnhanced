@@ -31,6 +31,7 @@ for (const modulePath of MODULES) {
 
 // The UI modules touch `document` at call time but must still IMPORT cleanly.
 const UI_MODULES = [
+    '../src/dom.js',
     '../src/custom/editor-ui.js',
     '../src/workbench/inspector.js',
     '../src/workbench/panel.js',

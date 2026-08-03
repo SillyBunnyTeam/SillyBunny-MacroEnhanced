@@ -1,5 +1,6 @@
+import { MODULE_NAME } from '../settings.js';
 import { safeRegister, safeUnregister } from '../registration.js';
-import { compileDef } from './compile.js';
+import { CATEGORY_CUSTOM, compileDef } from './compile.js';
 import { getEffectiveDefs } from './store.js';
 
 /** @type {Map<string, string>} registered custom macro name (lower) -> fingerprint */
@@ -35,6 +36,15 @@ export function syncRegistrations() {
 
     for (const [nameKey, { def, scope }] of desired) {
         if (registered.has(nameKey)) {
+            continue;
+        }
+        // Backstop for defs saved before validation refused built-in names: never
+        // let a custom macro overwrite one of our own non-custom registrations.
+        const existing = ctx.macros?.registry?.getMacro?.(def.name);
+        if (existing
+            && String(existing.source?.name ?? '').toLowerCase() === MODULE_NAME.toLowerCase()
+            && existing.category !== CATEGORY_CUSTOM) {
+            console.warn(`[Macro Enhanced] Custom macro "{{${def.name}}}" collides with a built-in Macro Enhanced macro and was not registered. Rename it in the settings drawer.`);
             continue;
         }
         const actualName = safeRegister(def.name, compileDef(def, { engine }));

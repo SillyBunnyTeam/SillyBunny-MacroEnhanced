@@ -5,7 +5,6 @@ const SETTINGS_VERSION = 1;
 function defaultSettings() {
     return {
         settingsVersion: SETTINGS_VERSION,
-        enabled: true,
         customMacros: [],
     };
 }
@@ -31,9 +30,6 @@ export function getSettings() {
     }
     if (!Array.isArray(settings.customMacros)) {
         settings.customMacros = [];
-    }
-    if (typeof settings.enabled !== 'boolean') {
-        settings.enabled = true;
     }
 
     return settings;
