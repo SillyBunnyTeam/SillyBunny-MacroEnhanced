@@ -4,6 +4,8 @@ import { teardownRegistrations } from './src/registration.js';
 import { recordCharMessage, recordGeneration, recordSwipe, recordUserMessage } from './src/chat-state.js';
 import { registerUtilityMacros } from './src/utility-macros.js';
 import { registerStateMacros } from './src/state-macros.js';
+import { registerLogicMacros } from './src/logic-macros.js';
+import { registerDateMacros } from './src/date-macros.js';
 import { registerLorebookMacros } from './src/lorebook-macros.js';
 import { clearCache, prewarm, indexBook, setActiveEntries } from './src/lorebook-cache.js';
 import { syncRegistrations, teardownCustomRegistrations } from './src/custom/registrar.js';
@@ -39,6 +41,8 @@ function activateMacros() {
     macrosRegistered = true;
     registerUtilityMacros();
     registerStateMacros();
+    registerLogicMacros();
+    registerDateMacros();
     registerLorebookMacros();
     syncRegistrations();
     const ctx = SillyTavern.getContext();
