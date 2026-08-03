@@ -1,11 +1,14 @@
 import {
     SCOPE_CHARACTER,
+    SCOPE_CHAT,
     SCOPE_GLOBAL,
     createDef,
     getAllCustomNames,
     getCharacterDefs,
+    getChatDefs,
     getGlobalDefs,
     saveCharacterDefs,
+    saveChatDefs,
     saveGlobalDefs,
     validateDef,
 } from './store.js';
@@ -15,12 +18,17 @@ import { button, el } from '../dom.js';
 const VALIDATE_DEBOUNCE_MS = 300;
 
 function scopeLabel(scope) {
-    return scope === SCOPE_CHARACTER ? 'Character' : 'Global';
+    if (scope === SCOPE_CHARACTER) {
+        return 'Character';
+    }
+    return scope === SCOPE_CHAT ? 'Chat' : 'Global';
 }
 
 async function persist(scope, defs) {
     if (scope === SCOPE_CHARACTER) {
         await saveCharacterDefs(defs);
+    } else if (scope === SCOPE_CHAT) {
+        saveChatDefs(defs);
     } else {
         saveGlobalDefs(defs);
     }
@@ -28,7 +36,15 @@ async function persist(scope, defs) {
 }
 
 function defsForScope(scope) {
-    return scope === SCOPE_CHARACTER ? getCharacterDefs() : getGlobalDefs();
+    if (scope === SCOPE_CHARACTER) {
+        return getCharacterDefs();
+    }
+    return scope === SCOPE_CHAT ? getChatDefs() : getGlobalDefs();
+}
+
+function isChatUnavailable() {
+    const ctx = SillyTavern.getContext();
+    return ctx.chatId === undefined || ctx.chatId === null;
 }
 
 /** A <label> wrapping the input, so the caption reads and clicks as its label. */
@@ -57,6 +73,7 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
         const groups = [
             { scope: SCOPE_GLOBAL, defs: getGlobalDefs() },
             { scope: SCOPE_CHARACTER, defs: getCharacterDefs() },
+            { scope: SCOPE_CHAT, defs: getChatDefs() },
         ];
         let any = false;
         for (const { scope, defs } of groups) {
@@ -247,10 +264,19 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
         scopeRow.appendChild(el('span', undefined, 'Saved for: '));
         const scopeSelect = document.createElement('select');
         scopeSelect.className = 'text_pole';
-        for (const value of [SCOPE_GLOBAL, SCOPE_CHARACTER]) {
+        const scopeCaptions = {
+            [SCOPE_GLOBAL]: 'Everywhere (global)',
+            [SCOPE_CHARACTER]: 'Current character only',
+            [SCOPE_CHAT]: 'This chat only',
+        };
+        for (const value of [SCOPE_GLOBAL, SCOPE_CHARACTER, SCOPE_CHAT]) {
             const option = document.createElement('option');
             option.value = value;
-            option.textContent = value === SCOPE_GLOBAL ? 'Everywhere (global)' : 'Current character only';
+            option.textContent = scopeCaptions[value];
+            if (value === SCOPE_CHAT && isChatUnavailable()) {
+                option.disabled = true;
+                option.title = 'Open a chat first.';
+            }
             scopeSelect.appendChild(option);
         }
         scopeSelect.value = scope;
@@ -279,6 +305,10 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
             }
             if (noCharacter && persistedScope === SCOPE_CHARACTER && persistedScope !== scope) {
                 problems.textContent = 'Open the character this macro belongs to before moving it to another scope.';
+                return false;
+            }
+            if (isChatUnavailable() && (scope === SCOPE_CHAT || persistedScope === SCOPE_CHAT)) {
+                problems.textContent = 'Open a chat first to work with a chat-scoped macro.';
                 return false;
             }
 

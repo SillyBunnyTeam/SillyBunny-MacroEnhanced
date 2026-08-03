@@ -3,7 +3,7 @@ import { getRegisteredNames } from './registration.js';
 import { getChatState, touchChatState } from './chat-state.js';
 import { findEntry } from './lorebook-cache.js';
 import { truncateText } from './utility-impl.js';
-import { SCOPE_CHARACTER, SCOPE_GLOBAL, createDef, getAllCustomNames, getCharacterDefs, getGlobalDefs, saveCharacterDefs, saveGlobalDefs, validateDef } from './custom/store.js';
+import { SCOPE_CHARACTER, SCOPE_CHAT, SCOPE_GLOBAL, createDef, getAllCustomNames, getCharacterDefs, getChatDefs, getGlobalDefs, saveCharacterDefs, saveChatDefs, saveGlobalDefs, validateDef } from './custom/store.js';
 import { getRegisteredCustomNames, syncRegistrations } from './custom/registrar.js';
 import { createSandbox } from './workbench/sandbox.js';
 import { openWorkbench } from './workbench/panel.js';
@@ -253,13 +253,15 @@ export function registerCommands() {
                 const name = String(named?.name ?? '').trim();
                 const template = String(unnamed ?? '');
                 if (!name || !template) {
-                    return 'Usage: /me-define name=mymacro [args=a,b] [scope=global|character] the template text';
+                    return 'Usage: /me-define name=mymacro [args=a,b] [scope=global|character|chat] the template text';
                 }
-                const scope = String(named?.scope ?? SCOPE_GLOBAL).toLowerCase() === SCOPE_CHARACTER ? SCOPE_CHARACTER : SCOPE_GLOBAL;
+                const scopeRaw = String(named?.scope ?? SCOPE_GLOBAL).toLowerCase();
+                const scope = [SCOPE_GLOBAL, SCOPE_CHARACTER, SCOPE_CHAT].includes(scopeRaw) ? scopeRaw : SCOPE_GLOBAL;
                 const args = String(named?.args ?? '').split(',').map(part => part.trim()).filter(Boolean)
                     .map(argName => ({ name: argName, optional: false }));
 
-                const defs = scope === SCOPE_CHARACTER ? getCharacterDefs() : getGlobalDefs();
+                const defs = scope === SCOPE_CHARACTER ? getCharacterDefs()
+                    : scope === SCOPE_CHAT ? getChatDefs() : getGlobalDefs();
                 const existing = defs.find(def => def.name.toLowerCase() === name.toLowerCase());
                 const def = createDef({ ...(existing ?? {}), name, template, args });
 
@@ -276,6 +278,11 @@ export function registerCommands() {
                         return 'Open a character chat first to save a character-scoped macro.';
                     }
                     await saveCharacterDefs(nextDefs);
+                } else if (scope === SCOPE_CHAT) {
+                    if (liveCtx.chatId === undefined || liveCtx.chatId === null) {
+                        return 'Open a chat first to save a chat-scoped macro.';
+                    }
+                    saveChatDefs(nextDefs);
                 } else {
                     saveGlobalDefs(nextDefs);
                 }
@@ -297,10 +304,10 @@ export function registerCommands() {
                 }),
                 SlashCommandNamedArgument.fromProps({
                     name: 'scope',
-                    description: 'global (default) or character.',
+                    description: 'global (default), character, or chat (this chat only).',
                     typeList: [ARGUMENT_TYPE.STRING],
                     defaultValue: SCOPE_GLOBAL,
-                    enumList: [SCOPE_GLOBAL, SCOPE_CHARACTER],
+                    enumList: [SCOPE_GLOBAL, SCOPE_CHARACTER, SCOPE_CHAT],
                     isRequired: false,
                 }),
             ],
@@ -323,6 +330,7 @@ export function registerCommands() {
                 }
                 const globals = getGlobalDefs();
                 const characterDefs = getCharacterDefs();
+                const chatDefs = getChatDefs();
                 let removed = false;
                 if (globals.some(def => def.name.toLowerCase() === name)) {
                     saveGlobalDefs(globals.filter(def => def.name.toLowerCase() !== name));
@@ -332,6 +340,10 @@ export function registerCommands() {
                     await saveCharacterDefs(characterDefs.filter(def => def.name.toLowerCase() !== name));
                     removed = true;
                 }
+                if (chatDefs.some(def => def.name.toLowerCase() === name)) {
+                    saveChatDefs(chatDefs.filter(def => def.name.toLowerCase() !== name));
+                    removed = true;
+                }
                 syncRegistrations();
                 return removed ? `Macro {{${name}}} removed.` : `No custom macro named {{${name}}}.`;
             },
@@ -339,7 +351,7 @@ export function registerCommands() {
                 new SlashCommandArgument('the macro name to remove', [ARGUMENT_TYPE.STRING], true, false),
             ],
             returns: 'a confirmation message',
-            helpString: 'Removes a custom macro (from both scopes if present).',
+            helpString: 'Removes a custom macro (from every scope it appears in).',
         }));
 
         registerCommand(SlashCommand.fromProps({
