@@ -292,7 +292,7 @@ export function sortList(list, separator = ',', order = 'asc') {
 
 export class JsonPathError extends Error {}
 
-function parseJsonPath(path) {
+export function parseJsonPath(path) {
     const segments = [];
     const src = String(path);
     let i = 0;
