@@ -68,8 +68,11 @@ export function installStubContext(overrides = {}) {
     const ctx = {
         extensionSettings: { variables: { global: globalVars } },
         chatMetadata: { variables: localVars },
+        chat: [],
+        chatId: 'stub-chat',
         characters: [],
         characterId: undefined,
+        getRequestHeaders: () => ({}),
         variables: { local: makeVarApi(localVars), global: makeVarApi(globalVars) },
         saveSettingsDebounced: () => {},
         saveMetadataDebounced: () => {},

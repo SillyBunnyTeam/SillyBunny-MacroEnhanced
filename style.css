@@ -134,6 +134,32 @@
     opacity: 0.7;
 }
 
+/* ---- frozen chat values ---- */
+
+.me-frozen-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+    margin: 5px 0;
+}
+
+.me-frozen-table td {
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #333);
+    padding: 2px 6px 2px 0;
+    vertical-align: top;
+    word-break: break-word;
+}
+
+.me-frozen-kind {
+    opacity: 0.7;
+    white-space: nowrap;
+}
+
+.me-frozen-key {
+    font-family: var(--monoFontFamily, monospace);
+    white-space: nowrap;
+}
+
 /* ---- workbench ---- */
 
 .me-workbench {

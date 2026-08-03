@@ -9,8 +9,12 @@ const {
     createSandbox,
     createSandboxStore,
     findUnshadowedVariableMacros,
+    flattenChatState,
     getShadowedNames,
 } = await import('../src/workbench/sandbox.js');
+const { emptyState } = await import('../src/chat-state.js');
+const { STATEFUL_MACRO_NAMES, registerStateMacros } = await import('../src/state-macros.js');
+const { teardownRegistrations } = await import('../src/registration.js');
 
 beforeEach(() => {
     installStubContext({});
@@ -179,5 +183,96 @@ test('local and global shadow sets do not overlap', () => {
     const local = new Set(Object.values(SHADOWED_LOCAL).flat());
     for (const name of Object.values(SHADOWED_GLOBAL).flat()) {
         assert.ok(!local.has(name), `${name} appears in both local and global shadow sets`);
+    }
+});
+
+// ---- Layer C: chat-state overlay ----
+
+function makeChatState() {
+    const state = emptyState();
+    state.frozen.weather = { value: 'stormy', frozenAt: 1 };
+    state.counters.userMessages = 4;
+    return state;
+}
+
+test('chatState overlay is an independent clone of the real state', () => {
+    const real = makeChatState();
+    const sandbox = createSandbox({
+        getLocalStore: () => ({}), getGlobalStore: () => ({}), getChatState: () => real,
+    });
+
+    assert.deepEqual(sandbox.chatState.frozen, real.frozen);
+    sandbox.chatState.frozen.newkey = { value: 'sandboxed', frozenAt: 2 };
+    sandbox.chatState.counters.userMessages = 99;
+    assert.ok(!real.frozen.newkey, 'real state untouched');
+    assert.equal(real.counters.userMessages, 4);
+
+    const pending = sandbox.pendingChanges();
+    assert.deepEqual(pending.chat.get('frozen:newkey'), { before: undefined, after: 'sandboxed' });
+    assert.deepEqual(pending.chat.get('counter:userMessages'), { before: '4', after: '99' });
+});
+
+test('createSandbox without a chat falls back to an empty state overlay', () => {
+    const sandbox = createSandbox({ getLocalStore: () => ({}), getGlobalStore: () => ({}) });
+    assert.deepEqual(sandbox.chatState.frozen, {});
+    assert.equal(sandbox.pendingChanges().chat.size, 0);
+});
+
+test('run() restores real chat-state writes (Layer C backstop) and records them', () => {
+    const real = makeChatState();
+    const sandbox = createSandbox({
+        getLocalStore: () => ({}), getGlobalStore: () => ({}), getChatState: () => real,
+    });
+
+    sandbox.run(() => {
+        // Simulate an undisciplined stateful handler writing the REAL state.
+        real.frozen.leak = { value: 'oops', frozenAt: 3 };
+        real.counters.swipes = 42;
+        return '';
+    }, '');
+
+    assert.ok(!real.frozen.leak, 'leaked write restored');
+    assert.equal(real.counters.swipes, 0);
+    const pending = sandbox.pendingChanges();
+    assert.deepEqual(pending.chat.get('frozen:leak'), { before: undefined, after: 'oops' });
+});
+
+test('reset() re-clones the chat-state overlay in place', () => {
+    const real = makeChatState();
+    const sandbox = createSandbox({
+        getLocalStore: () => ({}), getGlobalStore: () => ({}), getChatState: () => real,
+    });
+    const overlayRef = sandbox.chatState;
+    overlayRef.frozen.newkey = { value: 'sandboxed', frozenAt: 2 };
+
+    sandbox.reset();
+    assert.equal(sandbox.chatState, overlayRef, 'same object identity (panel holds a reference)');
+    assert.ok(!overlayRef.frozen.newkey);
+    assert.equal(sandbox.pendingChanges().chat.size, 0);
+});
+
+test('flattenChatState covers every value kind and skips firstSeenAt', () => {
+    const state = emptyState();
+    state.frozen.a = { value: '1' };
+    state.sticky.b = { value: '2', atUserCount: 0 };
+    state.daily.c = { value: '3', day: '2026-01-01' };
+    state.rolls.d = { value: '4', formula: 'd6' };
+    const flat = flattenChatState(state);
+    assert.equal(flat['frozen:a'], '1');
+    assert.equal(flat['sticky:b'], '2');
+    assert.equal(flat['daily:c'], '3');
+    assert.equal(flat['rolls:d'], '4');
+    assert.equal(flat['counter:userMessages'], '0');
+    assert.ok(!('counter:firstSeenAt' in flat), 'creation stamp is not a diffable value');
+});
+
+test('every STATEFUL_MACRO_NAMES entry is a registered enhanced-state macro', () => {
+    teardownRegistrations();
+    const { registry } = installStubContext({});
+    registerStateMacros();
+    for (const name of STATEFUL_MACRO_NAMES) {
+        const definition = registry.getMacro(name);
+        assert.ok(definition, `${name} not registered`);
+        assert.equal(definition.category, 'enhanced-state');
     }
 });

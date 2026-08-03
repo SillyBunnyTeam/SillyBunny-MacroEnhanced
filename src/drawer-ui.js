@@ -1,6 +1,8 @@
 import { getRemaps } from './registration.js';
+import { getChatState, touchChatState } from './chat-state.js';
 import { renderCustomMacroManager } from './custom/editor-ui.js';
 import { openWorkbench } from './workbench/panel.js';
+import { truncateText } from './utility-impl.js';
 import { button, el } from './dom.js';
 
 const DRAWER_ID = 'me-settings-drawer';
@@ -65,6 +67,42 @@ export function renderDrawer({ engineAvailable }) {
     renderCustomMacroManager(managerHost, {
         onTestInWorkbench: (text) => openWorkbench({ initialText: text }),
     });
+
+    renderFrozenValues(content, { engineAvailable });
+}
+
+/** Values saved by {{freeze}}/{{sticky}}/{{daily}}/{{rollonce}} in the current chat. */
+function renderFrozenValues(content, drawerState) {
+    const state = getChatState();
+    if (!state) {
+        return;
+    }
+    const kinds = [['freeze', 'frozen'], ['sticky', 'sticky'], ['daily', 'daily'], ['roll', 'rolls']];
+    const entries = kinds.flatMap(([label, prop]) =>
+        Object.keys(state[prop] ?? {}).map(key => ({ label, prop, key })));
+    if (!entries.length) {
+        return;
+    }
+
+    content.appendChild(el('div', 'me-drawer-section-title', 'Frozen chat values'));
+    const table = el('table', 'me-frozen-table');
+    for (const { label, prop, key } of entries) {
+        const row = el('tr');
+        row.appendChild(el('td', 'me-frozen-kind', label));
+        row.appendChild(el('td', 'me-frozen-key', key));
+        row.appendChild(el('td', 'me-frozen-value', truncateText(String(state[prop][key]?.value ?? ''), 60)));
+        const actions = el('td', 'me-frozen-actions');
+        actions.appendChild(button('menu_button me-custom-button', 'Delete', () => {
+            delete state[prop][key];
+            touchChatState();
+            renderDrawer(drawerState);
+        }));
+        row.appendChild(actions);
+        table.appendChild(row);
+    }
+    content.appendChild(table);
+    content.appendChild(el('div', 'me-drawer-hint',
+        'Saved by {{freeze}}, {{sticky}}, {{daily}} and {{rollonce}} in this chat. Deleting one makes the macro re-evaluate next time.'));
 }
 
 export function removeDrawer() {

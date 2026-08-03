@@ -1,7 +1,9 @@
 import { isEngineAvailable } from './src/engine-gate.js';
 import { getSettings } from './src/settings.js';
 import { teardownRegistrations } from './src/registration.js';
+import { recordCharMessage, recordGeneration, recordSwipe, recordUserMessage } from './src/chat-state.js';
 import { registerUtilityMacros } from './src/utility-macros.js';
+import { registerStateMacros } from './src/state-macros.js';
 import { registerLorebookMacros } from './src/lorebook-macros.js';
 import { clearCache, prewarm, indexBook, setActiveEntries } from './src/lorebook-cache.js';
 import { syncRegistrations, teardownCustomRegistrations } from './src/custom/registrar.js';
@@ -36,6 +38,7 @@ function activateMacros() {
     }
     macrosRegistered = true;
     registerUtilityMacros();
+    registerStateMacros();
     registerLorebookMacros();
     syncRegistrations();
     const ctx = SillyTavern.getContext();
@@ -99,6 +102,32 @@ export function init() {
         // Character-scoped custom macros follow the chat.
         syncRegistrations();
         renderDrawerTracked();
+    });
+
+    // Counters for {{usermsgcount}}/{{sticky}}/etc. — maintained only from events,
+    // never from macro evaluation, so prompt builds and dry runs cannot drift them.
+    subscribe(events.MESSAGE_SENT, () => {
+        if (initialized && macrosRegistered) {
+            recordUserMessage();
+        }
+    });
+
+    subscribe(events.MESSAGE_RECEIVED, () => {
+        if (initialized && macrosRegistered) {
+            recordCharMessage();
+        }
+    });
+
+    subscribe(events.MESSAGE_SWIPED, () => {
+        if (initialized && macrosRegistered) {
+            recordSwipe();
+        }
+    });
+
+    subscribe(events.GENERATION_STARTED, (_type, _params, isDryRun) => {
+        if (initialized && macrosRegistered && !isDryRun) {
+            recordGeneration();
+        }
     });
 
     subscribe(events.WORLDINFO_SETTINGS_UPDATED, () => {

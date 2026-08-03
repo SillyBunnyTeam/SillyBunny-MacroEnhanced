@@ -1,16 +1,20 @@
 export const MODULE_NAME = 'MacroEnhanced';
 
-const SETTINGS_VERSION = 1;
+const SETTINGS_VERSION = 2;
 
 function defaultSettings() {
     return {
         settingsVersion: SETTINGS_VERSION,
         customMacros: [],
+        auditor: { manualCachingAtDepth: null },
     };
 }
 
 function migrate(settings) {
-    // v1 is the first schema; future migrations chain here.
+    // v1 -> v2: added the Cache Auditor preferences.
+    if (!settings.auditor || typeof settings.auditor !== 'object') {
+        settings.auditor = { manualCachingAtDepth: null };
+    }
     settings.settingsVersion = SETTINGS_VERSION;
     return settings;
 }
@@ -30,6 +34,9 @@ export function getSettings() {
     }
     if (!Array.isArray(settings.customMacros)) {
         settings.customMacros = [];
+    }
+    if (!settings.auditor || typeof settings.auditor !== 'object') {
+        settings.auditor = { manualCachingAtDepth: null };
     }
 
     return settings;
