@@ -1,4 +1,5 @@
 import { isEngineAvailable } from '../engine-gate.js';
+import { getChatState } from '../chat-state.js';
 import { button, el } from '../dom.js';
 import { createSandbox, findUnshadowedVariableMacros } from './sandbox.js';
 import { renderInspector } from './inspector.js';
@@ -54,6 +55,8 @@ function evaluateSandboxed(ctx, sandbox, input) {
             dynamicMacros,
             postProcessFn: (x) => x,
         });
+        // Layer C: stateful macros ({{freeze}} etc.) write to the sandbox overlay.
+        env.extra = { ...(env.extra ?? {}), meSandboxState: sandbox.chatState };
         return ctx.macros.engine.evaluate(text, env);
     }, input);
 }
@@ -105,6 +108,7 @@ export async function openWorkbench({ initialText = '' } = {}) {
             }
             return settings?.variables?.global ?? {};
         },
+        getChatState: () => getChatState(),
     });
     const unshadowed = findUnshadowedVariableMacros(ctx.macros?.registry);
 
@@ -150,7 +154,7 @@ export async function openWorkbench({ initialText = '' } = {}) {
     right.appendChild(inspectorContainer);
 
     root.appendChild(el('div', 'me-workbench-footnote',
-        'Sandboxed — nothing is saved. Variable macros write to a throwaway copy; {{.var}} shorthand changes are reverted after each preview. Ctrl+Enter evaluates immediately.'));
+        'Sandboxed — nothing is saved. Variable macros and frozen values ({{freeze}}, {{sticky}}, …) write to a throwaway copy; {{.var}} shorthand changes are reverted after each preview. Ctrl+Enter evaluates immediately.'));
 
     const refreshInspector = () => {
         const liveCtx = SillyTavern.getContext();

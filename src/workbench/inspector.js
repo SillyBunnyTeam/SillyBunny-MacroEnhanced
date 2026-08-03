@@ -35,9 +35,10 @@ function renderChanges(pending) {
     const section = el('div', 'me-inspector-section');
     section.appendChild(el('div', 'me-inspector-title', 'Pending changes (not saved)'));
 
-    const total = pending.local.size + pending.global.size;
+    const chatChanges = pending.chat ?? new Map();
+    const total = pending.local.size + pending.global.size + chatChanges.size;
     if (!total) {
-        section.appendChild(el('div', 'me-inspector-empty', 'The previewed text would not change any variables.'));
+        section.appendChild(el('div', 'me-inspector-empty', 'The previewed text would not change any variables or frozen values.'));
         return section;
     }
 
@@ -53,6 +54,7 @@ function renderChanges(pending) {
     };
     addRows(pending.local, 'chat');
     addRows(pending.global, 'global');
+    addRows(chatChanges, 'state');
     section.appendChild(table);
     return section;
 }

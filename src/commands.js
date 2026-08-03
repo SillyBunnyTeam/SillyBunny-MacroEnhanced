@@ -1,6 +1,8 @@
 import { isEngineAvailable } from './engine-gate.js';
 import { getRegisteredNames } from './registration.js';
+import { getChatState, touchChatState } from './chat-state.js';
 import { findEntry } from './lorebook-cache.js';
+import { truncateText } from './utility-impl.js';
 import { SCOPE_CHARACTER, SCOPE_GLOBAL, createDef, getAllCustomNames, getCharacterDefs, getGlobalDefs, saveCharacterDefs, saveGlobalDefs, validateDef } from './custom/store.js';
 import { getRegisteredCustomNames, syncRegistrations } from './custom/registrar.js';
 import { createSandbox } from './workbench/sandbox.js';
@@ -18,7 +20,7 @@ export function setCommandsActive(value) {
 const INACTIVE = 'Macro Enhanced is inactive.';
 const ENGINE_OFF = 'Macro Enhanced needs the Experimental Macro Engine enabled (User Settings → Experimental Macro Engine).';
 
-function evaluateWithEngine(text, dynamicMacros = {}) {
+function evaluateWithEngine(text, dynamicMacros = {}, extra = null) {
     const ctx = SillyTavern.getContext();
     const env = ctx.macros.envBuilder.buildFromRawEnv({
         content: text,
@@ -26,6 +28,9 @@ function evaluateWithEngine(text, dynamicMacros = {}) {
         dynamicMacros,
         postProcessFn: (x) => x,
     });
+    if (extra) {
+        env.extra = { ...(env.extra ?? {}), ...extra };
+    }
     return ctx.macros.engine.evaluate(text, env);
 }
 
@@ -101,8 +106,11 @@ export function registerCommands() {
                 const sandbox = createSandbox({
                     getLocalStore: () => liveCtx.chatMetadata?.variables ?? {},
                     getGlobalStore: () => liveCtx.extensionSettings?.variables?.global ?? {},
+                    getChatState: () => getChatState(),
                 });
-                return sandbox.run((input, dynamicMacros) => evaluateWithEngine(input, dynamicMacros), text);
+                return sandbox.run(
+                    (input, dynamicMacros) => evaluateWithEngine(input, dynamicMacros, { meSandboxState: sandbox.chatState }),
+                    text);
             },
             namedArgumentList: [
                 SlashCommandNamedArgument.fromProps({
@@ -153,6 +161,86 @@ export function registerCommands() {
             ],
             returns: 'the raw content of the lorebook entry',
             helpString: 'Returns a lorebook entry\'s content. Example: <code>/me-lore Backstory</code>',
+        }));
+
+        registerCommand(SlashCommand.fromProps({
+            name: 'me-unfreeze',
+            callback: (named, unnamed) => {
+                if (!extensionActive) {
+                    return INACTIVE;
+                }
+                const state = getChatState();
+                if (!state) {
+                    return 'No chat is loaded.';
+                }
+                // kind label (user-facing) -> property on the chat state.
+                const kinds = { freeze: 'frozen', sticky: 'sticky', daily: 'daily', roll: 'rolls' };
+                if (String(named?.all ?? '').toLowerCase() === 'true') {
+                    let cleared = 0;
+                    for (const prop of Object.values(kinds)) {
+                        cleared += Object.keys(state[prop] ?? {}).length;
+                        state[prop] = {};
+                    }
+                    touchChatState();
+                    return `Cleared ${cleared} stored value${cleared === 1 ? '' : 's'} in this chat.`;
+                }
+                const key = String(named?.key ?? unnamed ?? '').trim();
+                if (!key) {
+                    const lines = [];
+                    for (const [label, prop] of Object.entries(kinds)) {
+                        const entries = Object.entries(state[prop] ?? {});
+                        if (entries.length) {
+                            lines.push(`${label}: ${entries.map(([entryKey, entry]) =>
+                                `${entryKey} = ${truncateText(String(entry?.value ?? ''), 40)}`).join(' | ')}`);
+                        }
+                    }
+                    return lines.length ? lines.join('\n') : 'Nothing is frozen in this chat.';
+                }
+                const kindArg = String(named?.kind ?? 'any').toLowerCase();
+                let removed = 0;
+                for (const [label, prop] of Object.entries(kinds)) {
+                    if (kindArg !== 'any' && kindArg !== label) {
+                        continue;
+                    }
+                    if (state[prop] && Object.hasOwn(state[prop], key)) {
+                        delete state[prop][key];
+                        removed++;
+                    }
+                }
+                if (removed) {
+                    touchChatState();
+                    return `Unfroze "${key}" — it will re-evaluate next time.`;
+                }
+                return `No stored value named "${key}" in this chat.`;
+            },
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'key',
+                    description: 'The stored key to remove (same as the unnamed argument).',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'kind',
+                    description: 'Limit to one kind: freeze, sticky, daily or roll.',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    defaultValue: 'any',
+                    enumList: ['any', 'freeze', 'sticky', 'daily', 'roll'],
+                    isRequired: false,
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'all',
+                    description: 'Set to true to clear every stored value in this chat.',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    defaultValue: 'false',
+                    isRequired: false,
+                }),
+            ],
+            unnamedArgumentList: [
+                new SlashCommandArgument('the stored key to remove (leave empty to list everything)', [ARGUMENT_TYPE.STRING], false, false),
+            ],
+            returns: 'a confirmation, or the list of stored values',
+            helpString: 'Lists or removes values saved by {{freeze}}, {{sticky}}, {{daily}} and {{rollonce}} in this chat. Examples: <code>/me-unfreeze</code>, <code>/me-unfreeze opening-weather</code>, <code>/me-unfreeze all=true</code>',
         }));
 
         registerCommand(SlashCommand.fromProps({
