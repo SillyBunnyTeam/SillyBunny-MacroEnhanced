@@ -51,6 +51,7 @@ export function registerUtilityMacros() {
         category: CATEGORY_TEXT,
         unnamedArgs: [{ name: 'text', description: 'The text to convert to uppercase.' }],
         description: 'Converts text to uppercase.',
+        returns: 'the uppercased text',
         exampleUsage: ['{{upper::hello}}'],
         handler: ({ unnamedArgs: [text] }) => String(text).toUpperCase(),
     });
@@ -59,6 +60,7 @@ export function registerUtilityMacros() {
         category: CATEGORY_TEXT,
         unnamedArgs: [{ name: 'text', description: 'The text to convert to lowercase.' }],
         description: 'Converts text to lowercase.',
+        returns: 'the lowercased text',
         exampleUsage: ['{{lower::HELLO}}'],
         handler: ({ unnamedArgs: [text] }) => String(text).toLowerCase(),
     });
@@ -68,6 +70,7 @@ export function registerUtilityMacros() {
         category: CATEGORY_TEXT,
         unnamedArgs: [{ name: 'text', description: 'The text to capitalize.' }],
         description: 'Capitalizes the first letter of the text.',
+        returns: 'the text with its first letter capitalized',
         exampleUsage: ['{{capitalize::hello world}}'],
         handler: ({ unnamedArgs: [text] }) => capitalizeText(text),
     });
@@ -80,6 +83,7 @@ export function registerUtilityMacros() {
             { name: 'replacement', optional: true, defaultValue: '', description: 'The replacement text. Leave out to delete the matches.' },
         ],
         description: 'Replaces every occurrence of a plain-text search string. Note: a literal "::" cannot appear in arguments.',
+        returns: 'the text with every match replaced',
         exampleUsage: ['{{replace::the cat sat::cat::dog}}'],
         handler: ({ unnamedArgs: [text, search, replacement] }) => replaceText(text, search, replacement),
     });
@@ -93,6 +97,7 @@ export function registerUtilityMacros() {
             { name: 'end', type: 'integer', optional: true, description: 'End position (exclusive). Negative counts from the end. Omit for "until the end".' },
         ],
         description: 'Extracts part of the text by character positions.',
+        returns: 'the extracted part of the text',
         exampleUsage: ['{{substring::hello world::0::5}}', '{{substring::hello world::-5}}'],
         handler: ({ unnamedArgs: [text, start, end], warn }) => {
             const from = parseInteger(start, { warn, name: 'start', fallback: 0 });
@@ -105,6 +110,7 @@ export function registerUtilityMacros() {
         category: CATEGORY_TEXT,
         unnamedArgs: [{ name: 'text', description: 'The text to measure.' }],
         description: 'Returns the number of characters in the text.',
+        returns: 'a whole number',
         returnType: 'integer',
         exampleUsage: ['{{length::hello}}'],
         handler: ({ unnamedArgs: [text] }) => String(String(text).length),
@@ -117,6 +123,7 @@ export function registerUtilityMacros() {
             { name: 'count', type: 'integer', description: `How many times to repeat (max ${REPEAT_MAX}).` },
         ],
         description: 'Repeats the text a number of times.',
+        returns: 'the repeated text',
         exampleUsage: ['{{repeat::na::4}}'],
         handler: ({ unnamedArgs: [text, count], warn }) => {
             const n = parseInteger(count, { warn, name: 'count', fallback: 0 });
@@ -135,6 +142,7 @@ export function registerUtilityMacros() {
             { name: 'fallback', description: 'What to use when the value is empty.' },
         ],
         description: 'Returns the value, or the fallback when the value is empty or only whitespace. Handy around {{getvar}} for unset variables.',
+        returns: 'the value, or the fallback when it was empty',
         exampleUsage: ['{{default::{{getvar::mood}}::neutral}}'],
         handler: ({ unnamedArgs: [value, fallback] }) => defaultText(value, fallback),
     });
@@ -147,6 +155,7 @@ export function registerUtilityMacros() {
             { name: 'ellipsis', optional: true, defaultValue: '…', description: 'Appended when the text is shortened.' },
         ],
         description: 'Shortens text to a maximum number of characters.',
+        returns: 'the shortened text',
         exampleUsage: ['{{truncate::{{charDescription}}::300}}'],
         handler: ({ unnamedArgs: [text, max, ellipsis], warn }) => {
             const n = parseInteger(max, { warn, name: 'max' });
@@ -165,6 +174,7 @@ export function registerUtilityMacros() {
             { name: 'ellipsis', optional: true, defaultValue: '…', description: 'Appended when the text is shortened.' },
         ],
         description: `Shortens text to a rough token budget. This is an ESTIMATE (about ${CHARS_PER_TOKEN} characters per token) and can be off by 20% or more — use it for budgeting, not exact limits.`,
+        returns: 'the shortened text',
         exampleUsage: ['{{truncatetokens::{{lore::Backstory}}::150}}'],
         handler: ({ unnamedArgs: [text, maxTokens, ellipsis], warn }) => {
             const n = parseInteger(maxTokens, { warn, name: 'maxTokens' });
@@ -179,6 +189,7 @@ export function registerUtilityMacros() {
         category: CATEGORY_TEXT,
         unnamedArgs: [{ name: 'text', description: 'The text to estimate.' }],
         description: `Estimates the token count of the text (about ${CHARS_PER_TOKEN} characters per token). This is an estimate, not an exact count.`,
+        returns: 'an estimated number of tokens',
         returnType: 'integer',
         exampleUsage: ['{{tokencount::{{charDescription}}}}'],
         handler: ({ unnamedArgs: [text] }) => String(estimateTokens(text)),
@@ -191,6 +202,7 @@ export function registerUtilityMacros() {
         category: CATEGORY_MATH,
         unnamedArgs: [{ name: 'expression', description: 'The expression to compute, e.g. "2 * (3 + 4)".' }],
         description: 'Computes an arithmetic expression. Supports + - * / % ^, parentheses, min, max, round, floor, ceil, abs, sqrt, pow, pi and e.',
+        returns: 'the computed number',
         returnType: 'number',
         exampleUsage: ['{{calc::2 * (3 + 4)}}', '{{calc::max({{getvar::hp}}, 0)}}'],
         handler: ({ unnamedArgs: [expression], warn }) => {
@@ -213,6 +225,7 @@ export function registerUtilityMacros() {
             { name: 'decimals', type: 'integer', optional: true, defaultValue: '0', description: 'Decimal places to keep.' },
         ],
         description: 'Rounds a number to the given number of decimal places.',
+        returns: 'the rounded number',
         returnType: 'number',
         exampleUsage: ['{{round::3.14159::2}}'],
         handler: ({ unnamedArgs: [value, decimals], warn }) => {
@@ -233,6 +246,7 @@ export function registerUtilityMacros() {
             { name: 'max', type: 'number', description: 'Highest allowed value.' },
         ],
         description: 'Limits a number to a range.',
+        returns: 'the number, limited to the range',
         returnType: 'number',
         exampleUsage: ['{{clamp::{{getvar::hp}}::0::100}}'],
         handler: ({ unnamedArgs: [value, min, max], warn }) => {
@@ -253,6 +267,7 @@ export function registerUtilityMacros() {
         unnamedArgs: [{ name: 'separator', description: 'Placed between the items.' }],
         list: { min: 1 },
         description: 'Joins the remaining arguments into one string.',
+        returns: 'the joined text',
         exampleUsage: ['{{join::, ::sword::shield::potion}}'],
         handler: ({ unnamedArgs: [separator], list }) => (list ?? []).join(String(separator)),
     });
@@ -265,6 +280,7 @@ export function registerUtilityMacros() {
             { name: 'separator', optional: true, defaultValue: ',', description: 'What separates the items.' },
         ],
         description: 'Picks one item out of a separated list.',
+        returns: 'the item at that position, or empty when out of range',
         exampleUsage: ['{{item::0::red,green,blue}}', '{{item::-1::a;b;c::;}}'],
         handler: ({ unnamedArgs: [index, list, separator], warn }) => {
             const i = parseInteger(index, { warn, name: 'index' });
@@ -282,6 +298,7 @@ export function registerUtilityMacros() {
             { name: 'separator', optional: true, defaultValue: ',', description: 'What separates the items.' },
         ],
         description: 'Counts the items in a separated list.',
+        returns: 'a whole number',
         returnType: 'integer',
         exampleUsage: ['{{count::red,green,blue}}'],
         handler: ({ unnamedArgs: [list, separator] }) => String(splitList(list, separator === undefined || separator === '' ? ',' : separator).length),
@@ -295,6 +312,7 @@ export function registerUtilityMacros() {
             { name: 'order', optional: true, defaultValue: 'asc', description: '"asc" or "desc".' },
         ],
         description: 'Sorts a separated list alphabetically (numbers sort naturally).',
+        returns: 'the sorted list',
         exampleUsage: ['{{listsort::banana,apple,cherry}}'],
         handler: ({ unnamedArgs: [list, separator, order] }) => {
             const sep = separator === undefined || separator === '' ? ',' : separator;
@@ -309,6 +327,7 @@ export function registerUtilityMacros() {
             { name: 'path', description: 'The path to read, e.g. "user.name" or "items[0].id".' },
         ],
         description: 'Reads a value out of JSON text by path.',
+        returns: 'the value at that path, or empty when it is missing',
         exampleUsage: ['{{jsonget::{{getvar::inventory}}::items[0].name}}'],
         handler: ({ unnamedArgs: [json, path], warn }) => {
             try {

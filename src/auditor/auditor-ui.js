@@ -1,7 +1,7 @@
 /**
  * The Cache Audit tab inside the Workbench popup.
  */
-import { button, el } from '../dom.js';
+import { button, el, helpButton } from '../dom.js';
 import { getSettings, saveSettings } from '../settings.js';
 import { isVolatileClass, runAudit } from './audit.js';
 
@@ -32,13 +32,18 @@ function describeConfig(config) {
  * @param {object} hooks
  * @param {() => (text: string) => string} [hooks.makeSandboxEvaluate] - Returns a fresh
  *        sandboxed evaluator per audit run (both passes share one sandbox session).
+ * @param {() => void} [hooks.onHelp] - Opens the prompt-caching guide.
  */
-export function renderAuditorTab(container, { makeSandboxEvaluate } = {}) {
+export function renderAuditorTab(container, { makeSandboxEvaluate, onHelp } = {}) {
     container.innerHTML = '';
 
-    container.appendChild(el('div', 'me-audit-intro',
+    const intro = el('div', 'me-audit-intro',
         'Finds macros that change between generations and silently break the prompt-caching discount. '
-        + 'Presets, character card, persona and lorebook sit above the cache breakpoints — anything volatile there costs money on every generation.'));
+        + 'Presets, character card, persona and lorebook sit above the cache breakpoints — anything volatile there costs money on every generation.');
+    if (onHelp) {
+        intro.appendChild(helpButton('Why prompt caching matters', onHelp));
+    }
+    container.appendChild(intro);
 
     const depthRow = el('label', 'me-audit-depth-row');
     depthRow.appendChild(el('span', undefined, 'Manual caching depth (used when the server config is not readable): '));

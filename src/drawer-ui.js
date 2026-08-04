@@ -4,7 +4,7 @@ import { renderCustomMacroManager } from './custom/editor-ui.js';
 import { renderTemplateGallery } from './custom/gallery-ui.js';
 import { openWorkbench } from './workbench/panel.js';
 import { truncateText } from './utility-impl.js';
-import { button, el } from './dom.js';
+import { button, el, helpButton } from './dom.js';
 
 const DRAWER_ID = 'me-settings-drawer';
 
@@ -49,9 +49,13 @@ export function renderDrawer({ engineAvailable }) {
         return;
     }
 
-    content.appendChild(button('menu_button', 'Open Macro Workbench', () => openWorkbench()));
+    const actions = el('div', 'me-drawer-actions');
+    actions.appendChild(button('menu_button', 'Open Macro Workbench', () => openWorkbench()));
+    actions.appendChild(button('menu_button', 'Macro reference', () => openWorkbench({ tab: 'Reference' })));
+    content.appendChild(actions);
 
-    content.appendChild(el('div', 'me-drawer-hint', 'All macros from this extension are listed under the "enhanced-…" groups in /help macros.'));
+    content.appendChild(el('div', 'me-drawer-hint',
+        'The reference lists every macro and slash command with its arguments and examples, plus short guides. They also appear in /help macros.'));
 
     const remaps = getRemaps();
     if (remaps.size) {
@@ -62,14 +66,14 @@ export function renderDrawer({ engineAvailable }) {
         content.appendChild(warning);
     }
 
-    content.appendChild(el('div', 'me-drawer-section-title', 'Your custom macros'));
+    content.appendChild(sectionTitle('Your custom macros', 'Writing your own macros', 'custom-macros'));
     const managerHost = el('div');
     content.appendChild(managerHost);
     const manager = renderCustomMacroManager(managerHost, {
         onTestInWorkbench: (text) => openWorkbench({ initialText: text }),
     });
 
-    content.appendChild(el('div', 'me-drawer-section-title', 'Template gallery'));
+    content.appendChild(sectionTitle('Template gallery', 'Template gallery and sharing', 'packs-and-gallery'));
     const galleryHost = el('div');
     content.appendChild(galleryHost);
     renderTemplateGallery(galleryHost, {
@@ -77,6 +81,13 @@ export function renderDrawer({ engineAvailable }) {
     });
 
     renderFrozenValues(content, { engineAvailable });
+}
+
+/** A section heading with a "?" that opens the matching guide in the reference. */
+function sectionTitle(text, topicTitle, topicId) {
+    const title = el('div', 'me-drawer-section-title', text);
+    title.appendChild(helpButton(topicTitle, () => openWorkbench({ tab: 'Reference', topic: topicId })));
+    return title;
 }
 
 /** Values saved by {{freeze}}/{{sticky}}/{{daily}}/{{rollonce}} in the current chat. */
@@ -88,11 +99,17 @@ function renderFrozenValues(content, drawerState) {
     const kinds = [['freeze', 'frozen'], ['sticky', 'sticky'], ['daily', 'daily'], ['roll', 'rolls']];
     const entries = kinds.flatMap(([label, prop]) =>
         Object.keys(state[prop] ?? {}).map(key => ({ label, prop, key })));
+
+    content.appendChild(sectionTitle('Frozen chat values', 'Why prompt caching matters', 'prompt-caching'));
+
+    // Say so rather than vanishing: an empty section reads as "nothing stored",
+    // a missing one reads as a bug.
     if (!entries.length) {
+        content.appendChild(el('div', 'me-drawer-hint',
+            'Nothing stored in this chat yet. {{freeze}}, {{sticky}}, {{daily}} and {{rollonce}} save their values here the first time they run.'));
         return;
     }
 
-    content.appendChild(el('div', 'me-drawer-section-title', 'Frozen chat values'));
     const table = el('table', 'me-frozen-table');
     for (const { label, prop, key } of entries) {
         const row = el('tr');

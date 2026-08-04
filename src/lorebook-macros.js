@@ -62,6 +62,7 @@ export function registerLorebookMacros() {
             { name: 'book', optional: true, description: 'A specific lorebook name. Without it, the chat, character and global books are searched in that order.' },
         ],
         description: 'Inserts the content of a lorebook entry. Macros inside the entry are expanded too.',
+        returns: 'the entry\'s content, or empty when it is not found',
         exampleUsage: ['{{lore::Backstory}}', '{{lore::Kingdom::My World}}'],
         handler: ({ unnamedArgs: [entryName, bookName], resolve, warn }) => {
             const found = lookup(entryName, bookName, warn);
@@ -89,6 +90,7 @@ export function registerLorebookMacros() {
             { name: 'book', optional: true, description: 'A specific lorebook name.' },
         ],
         description: 'Lists the trigger keywords of a lorebook entry, comma separated.',
+        returns: 'a comma separated list of keywords',
         exampleUsage: ['{{lorekeys::Backstory}}'],
         handler: ({ unnamedArgs: [entryName, bookName], warn }) => {
             const found = lookup(entryName, bookName, warn);
@@ -106,6 +108,7 @@ export function registerLorebookMacros() {
             { name: 'book', optional: true, description: 'A specific lorebook name.' },
         ],
         description: 'Checks whether a lorebook entry exists. Returns "true" or "false".',
+        returns: 'true or false',
         exampleUsage: ['{{if {{loreexists::Backstory}}}}...{{/if}}'],
         handler: ({ unnamedArgs: [entryName, bookName], warn }) => {
             const ctx = SillyTavern.getContext();
@@ -123,6 +126,7 @@ export function registerLorebookMacros() {
             { name: 'scope', optional: true, defaultValue: 'active', description: '"active" (triggered last generation), "bound" (enabled entries in the books bound to this chat) or "all".' },
         ],
         description: 'Counts lorebook entries.',
+        returns: 'a whole number',
         returnType: 'integer',
         exampleUsage: ['{{lorecount}}', '{{lorecount::bound}}'],
         handler: ({ unnamedArgs: [scope], warn }) => {
@@ -154,6 +158,7 @@ export function registerLorebookMacros() {
             { name: 'separator', optional: true, defaultValue: ', ', description: 'Placed between the entry titles.' },
         ],
         description: 'Lists the titles of the lorebook entries that triggered during the last generation.',
+        returns: 'a comma separated list of entry titles',
         exampleUsage: ['{{loreactive}}'],
         handler: ({ unnamedArgs: [separator] }) => {
             const sep = separator === undefined || separator === '' ? ', ' : separator;
@@ -167,6 +172,7 @@ export function registerLorebookMacros() {
             { name: 'separator', optional: true, defaultValue: ', ', description: 'Placed between the book names.' },
         ],
         description: 'Lists the lorebooks bound to this chat (chat book, character books, global books).',
+        returns: 'a comma separated list of lorebook names',
         exampleUsage: ['{{lorebooks}}'],
         handler: ({ unnamedArgs: [separator] }) => {
             const ctx = SillyTavern.getContext();
@@ -192,6 +198,7 @@ export function registerLorebookMacros() {
             { name: 'separator', optional: true, defaultValue: ', ', description: 'Placed between the entry titles.' },
         ],
         description: 'Lists the titles of the enabled entries in a lorebook (or in every book bound to this chat).',
+        returns: 'a comma separated list of entry titles',
         exampleUsage: ['{{loreentries}}', '{{loreentries::My World}}'],
         handler: ({ unnamedArgs: [bookName, separator], warn }) => {
             const ctx = SillyTavern.getContext();
@@ -211,6 +218,7 @@ export function registerLorebookMacros() {
             { name: 'book', optional: true, description: 'A specific lorebook name.' },
         ],
         description: 'Reads one field of a lorebook entry (its keywords, position, depth, probability, ...).',
+        returns: 'the field value, or empty when the field is unknown',
         exampleUsage: ['{{lorefield::Backstory::keys}}', '{{lorefield::Backstory::probability}}'],
         handler: ({ unnamedArgs: [entryName, field, bookName], warn }) => {
             const reader = LORE_FIELDS[String(field ?? '').trim().toLowerCase()];
@@ -257,6 +265,7 @@ export function registerLorebookMacros() {
             { name: 'key', optional: true, defaultValue: '', description: 'A label that keeps different picks independent.' },
         ],
         description: 'Inserts the content of one enabled entry — always the same one for this chat and key. A cache-friendly random story seed.',
+        returns: 'the chosen entry\'s content',
         exampleUsage: ['{{lorepick::Story Seeds}}', '{{lorepick::Story Seeds::second-seed}}'],
         handler: ({ unnamedArgs: [bookName, key], resolve, warn }) => {
             const ctx = SillyTavern.getContext();

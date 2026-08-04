@@ -1,4 +1,5 @@
 import { MODULE_NAME } from './settings.js';
+import { clearCatalog, forgetMacro, recordMacro } from './catalog.js';
 
 export const FALLBACK_PREFIX = 'me-';
 
@@ -82,6 +83,7 @@ export function safeRegister(name, options) {
     for (const { alias } of safeAliases) {
         registeredNames.add(alias.toLowerCase());
     }
+    recordMacro({ requested: name, actual: targetName, options: { ...options, aliases: safeAliases } });
     return targetName;
 }
 
@@ -107,6 +109,7 @@ export function safeUnregister(name) {
                 console.warn(`[Macro Enhanced] Failed to unregister "{{${candidate}}}"`, error);
             }
             registeredNames.delete(key);
+            forgetMacro(candidate);
         }
     }
     remaps.delete(lower);
@@ -139,4 +142,5 @@ export function teardownRegistrations() {
     }
     registeredNames.clear();
     remaps.clear();
+    clearCatalog();
 }
