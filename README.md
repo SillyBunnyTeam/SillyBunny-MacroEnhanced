@@ -27,7 +27,7 @@ Your own custom macros appear there too, with whatever descriptions you gave the
 
 <!-- macros:start -->
 
-*Generated from the macro definitions by `npm run docs` — 72 macros. Edit the descriptions in `src/*-macros.js`, not this table.*
+*Generated from the macro definitions by `npm run docs` — 86 macros. Edit the descriptions in `src/*-macros.js`, not this table.*
 
 ### Text
 
@@ -42,6 +42,7 @@ Your own custom macros appear there too, with whatever descriptions you gave the
 | `{{regexreplace::text::pattern::[replacement]::[flags]}}` | Regular-expression replace with guardrails. On any problem the original text is returned with a warning. Note: a complex pattern on long text can be slow. | the replaced text |
 | `{{repeat::text::count}}` | Repeats the text a number of times. | the repeated text |
 | `{{replace::text::search::[replacement]}}` | Replaces every occurrence of a plain-text search string. Note: a literal "::" cannot appear in arguments. | the text with every match replaced |
+| `{{split::text::separator::index}}` | Returns one piece of a split-up string. Returns nothing when the position is past either end. | the piece at that position |
 | `{{substring::text::start::[end]}}` | Extracts part of the text by character positions. | the extracted part of the text |
 | `{{titlecase::text}}` | Uppercases the first letter of every word. | the converted text |
 | `{{tokencount::text}}` | Estimates the token count of the text (about 4 characters per token). This is an estimate, not an exact count. | an estimated number of tokens |
@@ -49,6 +50,7 @@ Your own custom macros appear there too, with whatever descriptions you gave the
 | `{{truncatetokens::text::maxTokens::[ellipsis]}}` | Shortens text to a rough token budget. This is an ESTIMATE (about 4 characters per token) and can be off by 20% or more — use it for budgeting, not exact limits. | the shortened text |
 | `{{upper::text}}` | Converts text to uppercase. | the uppercased text |
 | `{{wordcount::text}}` | Counts the words in the text. | the number of words |
+| `{{wrap::prefix::suffix::value}}` | Surrounds a value with a prefix and suffix, but produces nothing at all when the value is empty. Useful for separators that should disappear along with what they separate. | the surrounded value, or nothing |
 
 ### Math
 
@@ -56,9 +58,14 @@ Your own custom macros appear there too, with whatever descriptions you gave the
 |---|---|---|
 | `{{avg::list::[separator]}}` | Averages the numbers in a list. Non-numeric items are skipped with a warning. | the average |
 | `{{calc::expression}}` | Computes an arithmetic expression. Supports + - * / % ^, parentheses, min, max, round, floor, ceil, abs, sqrt, pow, pi and e. | the computed number |
+| `{{ceil::value}}` | Rounds a number up to a whole number. | a whole number |
 | `{{clamp::value::min::max}}` | Limits a number to a range. | the number, limited to the range |
+| `{{floor::value}}` | Rounds a number down to a whole number. | a whole number |
 | `{{listmax::list::[separator]}}` | The largest value in a list (numeric when possible). | the largest value |
 | `{{listmin::list::[separator]}}` | The smallest value in a list (numeric when possible). | the smallest value |
+| `{{max::a::b}}` | The larger of two numbers. For a whole list, use {{listmax}}. | the larger number |
+| `{{min::a::b}}` | The smaller of two numbers. For a whole list, use {{listmin}}. | the smaller number |
+| `{{mod::value::divisor}}` | The remainder after dividing one number by another. | the remainder |
 | `{{round::value::[decimals]}}` | Rounds a number to the given number of decimal places. | the rounded number |
 | `{{sum::list::[separator]}}` | Adds up the numbers in a list. Non-numeric items are skipped with a warning. | the total |
 
@@ -88,13 +95,30 @@ Your own custom macros appear there too, with whatever descriptions you gave the
 | `{{eq::a::b}}` | True when a = b. Numbers compare numerically, anything else as text. Composes with {{if}}. | true or false |
 | `{{gt::a::b}}` | True when a > b. Numbers compare numerically, anything else as text. Composes with {{if}}. | true or false |
 | `{{gte::a::b}}` | True when a ≥ b. Numbers compare numerically, anything else as text. Composes with {{if}}. | true or false |
-| `{{isempty::value}}` | True when the value is empty or only whitespace. | true or false |
+| `{{isempty::value}}` (alias `{{blank}}`) | True when the value is empty or only whitespace. | true or false |
 | `{{lt::a::b}}` | True when a < b. Numbers compare numerically, anything else as text. Composes with {{if}}. | true or false |
 | `{{lte::a::b}}` | True when a ≤ b. Numbers compare numerically, anything else as text. Composes with {{if}}. | true or false |
 | `{{neq::a::b}}` | True when a ≠ b. Numbers compare numerically, anything else as text. Composes with {{if}}. | true or false |
 | `{{not::value}}` | Inverts a truthy/falsy value (same rules as {{if}}). | true or false |
 | `{{or::first::second::…}}` | True when at least one value is truthy (same rules as {{if}}). | true or false |
 | `{{switch::value::…}}` | Matches a value against case=result branches and returns the matching result. Only the winning branch's macros run. "default=result" catches everything else. | the matching branch's result |
+
+### Conditions
+
+| Macro | What it does | Returns |
+|---|---|---|
+| `{{expr::condition::…}}` | Works out a condition written the ordinary way, with == != > >= < <= && \|\| ! and brackets. Compare text or numbers; quote values containing spaces. Without this, {{if}} only asks whether the condition is non-empty, so "0 > 0" would count as true. | true or false |
+
+### Chat variables
+
+| Macro | What it does | Returns |
+|---|---|---|
+| `{{addchatvar::name::value}}` | Adds to a chat variable, creating it at 0 when it does not exist yet. Adds numerically when both sides are numbers, otherwise appends as text. Writes nothing to the prompt. | nothing |
+| `{{deletechatvar::name}}` | Removes a chat variable from this chat. Writes nothing to the prompt. | nothing |
+| `{{foreachChatVar::prefix::alias::content}}` | Repeats a block once per chat variable whose name starts with the prefix, in name order. Use it as a block with a matching {{/foreachChatVar}}. | the block repeated once per match, joined together |
+| `{{getchatvar::name::[fallback]}}` | Reads a chat variable. Returns the fallback (or nothing) when it has never been set. | the stored value |
+| `{{haschatvar::name}}` | True when the chat variable has been set in this chat. Composes with {{if}}. | true or false |
+| `{{setchatvar::name::value}}` | Stores a value in a chat variable, which persists in this chat only. Writes nothing to the prompt. Separate from {{setvar}}, so loop prefixes never collide with scratch values. | nothing |
 
 ### Dates
 
@@ -201,15 +225,72 @@ Results update as you type. Ctrl+Enter evaluates immediately.
 | `/me-eval text` | Evaluates text through the engine (sandboxed, add `sandbox=false` to apply variable changes for real). Pipeable. |
 | `/me-lore entry` | Returns a lorebook entry's raw content (`book=` to target a book). Pipeable. |
 | `/me-unfreeze` | Lists stored `{{freeze}}`/`{{sticky}}`/`{{daily}}`/`{{rollonce}}` values; pass a key, `kind=`, or `all=true` to remove |
+| `/me-chatvar` | Reads, sets, lists (`prefix=`) or deletes (`delete=true`) the chat variables used by `{{setchatvar}}` |
 | `/me-audit` | The Cache Auditor as a pipeable text report |
 | `/me-define` / `/me-undefine` | Create / remove custom macros from scripts (`scope=global\|character\|chat`) |
 | `/me-export scope=…` | A scope's custom macros as pack JSON. Pipeable. |
 | `/me-macros` | Lists everything this extension registered |
 
+## Conditions in `{{if}}`
+
+SillyBunny's `{{if}}` does not compare anything — it only asks whether its condition
+is non-empty. So `{{if::{{.hp}} > 0}}` hands it the text `0 > 0`, which is not empty,
+and the block always runs.
+
+Turn on **Work out comparisons in {{if}} conditions** in the settings drawer and those
+conditions are evaluated properly, with `== != > >= < <= && || !` and brackets. It is
+off by default, and conditions without a comparison are untouched either way, so
+switching it on cannot change what existing prompts do.
+
+It works as an engine pre-processor rather than by replacing `{{if}}`: the registry
+records ownership from the call stack, so re-registering the host's macro — even to
+hand back the host's own handler — would mark it as ours, and the extension-disable
+sweep would then remove `{{if}}` from the app entirely. Turning the setting off simply
+removes the pre-processor.
+
+`{{expr}}` is always available if you would rather opt in one condition at a time:
+`{{if::{{expr::{{.hp}} > 0}}}}`.
+
+## Chat variables
+
+`{{setchatvar}}` and friends store values that stay with the chat, and
+`{{foreachChatVar::prefix::alias}}…{{/foreachChatVar}}` walks every name starting with
+a prefix.
+
+They are a **separate store** from the host's `{{setvar}}`, deliberately. Content that
+loops over a prefix almost always also uses `{{setvar}}` for scratch values under that
+same prefix, and one shared namespace would render those scratch values as loop items.
+The trade-off is that the built-in `/getchatvar` command is an alias for the host's
+variables and will not see these — use `/me-chatvar`.
+
+## Importing content from other apps
+
+`scripts/convert-import.js` converts world books and regex-script bundles exported by
+other chat apps into the shapes SillyBunny actually imports:
+
+```
+node scripts/convert-import.js "My World.json" my-regexes.json --out ./converted
+```
+
+It is a script rather than a feature because neither problem it solves is reachable
+from inside an extension. A world book whose `entries` is an array is not read as a
+world book at all — the importer falls through to its CharacterBook branch, which
+looks for `keys` rather than `key`, and the import reports success having silently
+dropped every keyword. A regex bundle wrapped in `{"scripts": […]}` fails outright,
+since the importer takes a bare array.
+
+It also rewrites the few macro spellings the host's grammar cannot express: `{{@name}}`
+(`@` is not one of its sigils), `{{!setvar name value}}` (space-separated arguments
+arrive as one argument), and a lone space argument (the lexer discards whitespace
+between separators, so `:: ::` becomes `::{{space}}::`). Everything else is left
+byte-for-byte alone, and anything dropped is reported rather than silently lost.
+
 ## Good to know
 
 - If a future SillyBunny update ships a macro with the same name as one of ours, this extension steps aside and renames its own to `{{me-name}}` (noted in the settings panel). Every macro also has a hidden `{{me-…}}` alias from day one, so prompts using those keep working after updates.
 - The engine uses `::` to separate arguments, so a literal `::` can't appear inside one.
+- A `|` inside an argument starts an output filter, so `||` cannot appear in one either. Compat mode works around this by expressing OR through `{{or::a::b}}`, whose arguments are separated by `::` instead.
+- Reading a variable back through `{{getvar}}` or `{{.x}}` converts anything numeric-looking to a number (`public/scripts/variables.js`), so `00` comes back as `0`. Store text you need to keep verbatim in a chat variable, or format it where you use it rather than where you set it.
 - Disabling or uninstalling removes every registered macro.
 
 ## Install

@@ -43,6 +43,38 @@ export function defaultText(value, fallback) {
     return s.trim() ? s : String(fallback ?? '');
 }
 
+/**
+ * One field of a separated string, by position. Negative positions count from
+ * the end; a position past either end yields "".
+ *
+ * An empty separator means a single space. The host's lexer discards whitespace
+ * between argument separators, so `{{split::a b:: ::0}}` cannot deliver a literal
+ * space — a space is also the only separator worth defaulting to, since splitting
+ * on the true empty string is what {{substring}} is for. Write {{space}} to be
+ * explicit about it.
+ */
+export function splitField(text, separator, index) {
+    const s = String(text ?? '');
+    const sep = String(separator ?? '') || ' ';
+    const parts = s.split(sep);
+    const at = Math.trunc(index);
+    const resolved = at < 0 ? parts.length + at : at;
+    return resolved >= 0 && resolved < parts.length ? parts[resolved] : '';
+}
+
+/**
+ * Surrounds a value with a prefix and suffix, but only when the value is not
+ * empty — the point being to attach separators that should vanish along with
+ * whatever they were separating.
+ */
+export function wrapText(value, prefix, suffix) {
+    const s = String(value ?? '');
+    if (!s) {
+        return '';
+    }
+    return `${String(prefix ?? '')}${s}${String(suffix ?? '')}`;
+}
+
 export function truncateText(text, maxChars, ellipsis = '…') {
     const s = String(text);
     const max = Math.max(0, Math.trunc(maxChars));

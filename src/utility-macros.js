@@ -16,8 +16,10 @@ import {
     replaceText,
     roundTo,
     sortList,
+    splitField,
     splitList,
     substringText,
+    wrapText,
     truncateText,
     truncateTokensText,
 } from './utility-impl.js';
@@ -103,6 +105,53 @@ export function registerUtilityMacros() {
             const from = parseInteger(start, { warn, name: 'start', fallback: 0 });
             const to = end === undefined || end === '' ? undefined : parseInteger(end, { warn, name: 'end', fallback: undefined });
             return substringText(text, from, to);
+        },
+    });
+
+    // {{split}} and {{wrap}} resolve their own arguments (delayArgResolution) for
+    // one reason: the host's lexer throws away whitespace between argument
+    // separators, so a normally-resolved argument can never be a lone space. On
+    // the lazy path the raw text survives, which lets {{space}} through intact.
+    safeRegister('split', {
+        category: CATEGORY_TEXT,
+        delayArgResolution: true,
+        unnamedArgs: [
+            { name: 'text', description: 'The text to split.' },
+            { name: 'separator', description: 'What to split on. Leave empty for a single space; write {{space}} to be explicit.' },
+            { name: 'index', type: 'integer', description: 'Which piece to return, counting from 0. Negative counts from the end.' },
+        ],
+        description: 'Returns one piece of a split-up string. Returns nothing when the position is past either end.',
+        returns: 'the piece at that position',
+        exampleUsage: ['{{split::{{user}}::{{space}}::0}}', '{{split::a,b,c::,::-1}}'],
+        handler: (ctx) => {
+            const [rawText, rawSeparator, rawIndex] = ctx.unnamedArgs;
+            const text = String(ctx.resolve(rawText ?? ''));
+            const separator = String(ctx.resolve(rawSeparator ?? ''));
+            const index = parseInteger(String(ctx.resolve(rawIndex ?? '')), { warn: ctx.warn, name: 'index', fallback: null });
+            if (index === null) {
+                return '';
+            }
+            return splitField(text, separator, index);
+        },
+    });
+
+    safeRegister('wrap', {
+        category: CATEGORY_TEXT,
+        delayArgResolution: true,
+        unnamedArgs: [
+            { name: 'prefix', description: 'Put in front of the value. Write {{space}} for a space.' },
+            { name: 'suffix', description: 'Put after the value.' },
+            { name: 'value', description: 'The value to surround.' },
+        ],
+        description: 'Surrounds a value with a prefix and suffix, but produces nothing at all when the value is empty. Useful for separators that should disappear along with what they separate.',
+        returns: 'the surrounded value, or nothing',
+        exampleUsage: ['{{wrap::{{space}}::::{{split::{{user}}::{{space}}::1}}}}', '{{wrap:: (::)::{{getchatvar::title}}}}'],
+        handler: (ctx) => {
+            const [rawPrefix, rawSuffix, rawValue] = ctx.unnamedArgs;
+            const prefix = String(ctx.resolve(rawPrefix ?? ''));
+            const suffix = String(ctx.resolve(rawSuffix ?? ''));
+            const value = String(ctx.resolve(rawValue ?? ''));
+            return wrapText(value, prefix, suffix);
         },
     });
 
@@ -257,6 +306,74 @@ export function registerUtilityMacros() {
                 return String(value);
             }
             return formatNumber(clampNumber(n, lo, hi));
+        },
+    });
+
+    // {{calc}} already offers these as functions; they exist as macros of their own
+    // so a value straight out of another macro can be passed without building an
+    // expression string around it.
+    const rounding = (name, apply, word) => {
+        safeRegister(name, {
+            category: CATEGORY_MATH,
+            unnamedArgs: [{ name: 'value', type: 'number', description: 'The number to round.' }],
+            description: `Rounds a number ${word}.`,
+            returns: 'a whole number',
+            returnType: 'integer',
+            exampleUsage: [`{{${name}::{{calc::7 / 2}}}}`],
+            handler: ({ unnamedArgs: [value], warn }) => {
+                const n = parseNumber(value, { warn, name: 'value' });
+                return n === null ? String(value) : formatNumber(apply(n));
+            },
+        });
+    };
+    rounding('floor', Math.floor, 'down to a whole number');
+    rounding('ceil', Math.ceil, 'up to a whole number');
+
+    const extreme = (name, pick, word) => {
+        safeRegister(name, {
+            category: CATEGORY_MATH,
+            unnamedArgs: [
+                { name: 'a', type: 'number', description: 'The first number.' },
+                { name: 'b', type: 'number', description: 'The second number.' },
+            ],
+            description: `The ${word} of two numbers. For a whole list, use {{list${name}}}.`,
+            returns: `the ${word} number`,
+            returnType: 'number',
+            exampleUsage: [`{{${name}::0::{{getchatvar::satiety_ren}}}}`],
+            handler: ({ unnamedArgs: [a, b], warn }) => {
+                const x = parseNumber(a, { warn, name: 'a' });
+                const y = parseNumber(b, { warn, name: 'b' });
+                if (x === null || y === null) {
+                    return String(x === null ? a : b);
+                }
+                return formatNumber(pick(x, y));
+            },
+        });
+    };
+    extreme('min', Math.min, 'smaller');
+    extreme('max', Math.max, 'larger');
+
+    safeRegister('mod', {
+        category: CATEGORY_MATH,
+        unnamedArgs: [
+            { name: 'value', type: 'number', description: 'The number to divide.' },
+            { name: 'divisor', type: 'number', description: 'What to divide by.' },
+        ],
+        description: 'The remainder after dividing one number by another.',
+        returns: 'the remainder',
+        returnType: 'number',
+        exampleUsage: ['{{mod::{{getchatvar::current_minutes}}::1440}}'],
+        handler: ({ unnamedArgs: [value, divisor], warn }) => {
+            const n = parseNumber(value, { warn, name: 'value' });
+            const d = parseNumber(divisor, { warn, name: 'divisor' });
+            if (n === null || d === null) {
+                return String(value);
+            }
+            if (d === 0) {
+                warn('{{mod}}: cannot divide by zero.');
+                return String(value);
+            }
+            return formatNumber(n % d);
         },
     });
 

@@ -249,6 +249,89 @@ export function registerCommands() {
         }));
 
         registerCommand(SlashCommand.fromProps({
+            name: 'me-chatvar',
+            callback: (named, unnamed) => {
+                if (!extensionActive) {
+                    return INACTIVE;
+                }
+                const state = getChatState();
+                if (!state) {
+                    return 'No chat is loaded.';
+                }
+                const vars = state.chatVars ?? {};
+                const key = String(named?.key ?? unnamed ?? '').trim();
+
+                if (String(named?.delete ?? '').toLowerCase() === 'true') {
+                    if (!key) {
+                        return 'Name which chat variable to delete.';
+                    }
+                    if (!Object.hasOwn(vars, key)) {
+                        return `No chat variable named "${key}".`;
+                    }
+                    delete vars[key];
+                    touchChatState();
+                    return `Deleted chat variable "${key}".`;
+                }
+
+                if (named?.value !== undefined) {
+                    if (!key) {
+                        return 'Name which chat variable to set.';
+                    }
+                    vars[key] = String(named.value);
+                    touchChatState();
+                    return `Set "${key}" to ${truncateText(String(named.value), 40)}.`;
+                }
+
+                if (key) {
+                    return Object.hasOwn(vars, key) ? String(vars[key]) : '';
+                }
+
+                const prefix = String(named?.prefix ?? '');
+                const entries = Object.entries(vars)
+                    .filter(([name]) => name.startsWith(prefix))
+                    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+                if (!entries.length) {
+                    return prefix
+                        ? `No chat variables start with "${prefix}".`
+                        : 'No chat variables are set in this chat.';
+                }
+                return entries.map(([name, value]) => `${name} = ${truncateText(String(value), 60)}`).join('\n');
+            },
+            namedArgumentList: [
+                SlashCommandNamedArgument.fromProps({
+                    name: 'key',
+                    description: 'The chat variable to read, set or delete (same as the unnamed argument).',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'value',
+                    description: 'Set the chat variable to this value.',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'prefix',
+                    description: 'When listing, show only names starting with this.',
+                    typeList: [ARGUMENT_TYPE.STRING],
+                    isRequired: false,
+                }),
+                SlashCommandNamedArgument.fromProps({
+                    name: 'delete',
+                    description: 'Set to true to remove the named chat variable.',
+                    typeList: [ARGUMENT_TYPE.BOOLEAN],
+                    defaultValue: 'false',
+                    isRequired: false,
+                }),
+            ],
+            unnamedArgumentList: [
+                new SlashCommandArgument('the chat variable to read (leave empty to list them all)', [ARGUMENT_TYPE.STRING], false, false),
+            ],
+            returns: 'the value, the list of chat variables, or a confirmation',
+            helpString: 'Reads, sets, lists or deletes the chat variables used by {{setchatvar}} and {{foreachChatVar}}. These are a separate store from the host\'s own chat variables, so the built-in /getchatvar does not see them. Examples: <code>/me-chatvar</code>, <code>/me-chatvar prefix=satiety_</code>, <code>/me-chatvar key=day value=3</code>, <code>/me-chatvar key=satiety_ren delete=true</code>',
+        }));
+
+        registerCommand(SlashCommand.fromProps({
             name: 'me-audit',
             callback: async () => {
                 if (!extensionActive) {

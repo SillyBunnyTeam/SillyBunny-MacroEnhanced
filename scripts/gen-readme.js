@@ -27,6 +27,8 @@ const SECTIONS = [
     { category: 'enhanced-math', title: 'Math' },
     { category: 'enhanced-list', title: 'Lists and JSON' },
     { category: 'enhanced-logic', title: 'Logic' },
+    { category: 'enhanced-compat', title: 'Conditions' },
+    { category: 'enhanced-chatvar', title: 'Chat variables' },
     { category: 'enhanced-date', title: 'Dates' },
     { category: 'enhanced-state', title: 'Cache-friendly state' },
     { category: 'enhanced-lorebook', title: 'Lorebook' },
@@ -41,13 +43,17 @@ async function buildCatalog() {
     installStubContext({ registry: createStubRegistry() });
     const { getMacroCatalog, macroSignature } = await import('../src/catalog.js');
     const { registerUtilityMacros } = await import('../src/utility-macros.js');
+    const { registerCompatMacros } = await import('../src/compat-macros.js');
     const { registerLogicMacros } = await import('../src/logic-macros.js');
+    const { registerChatVarMacros } = await import('../src/chatvar-macros.js');
     const { registerDateMacros } = await import('../src/date-macros.js');
     const { registerStateMacros } = await import('../src/state-macros.js');
     const { registerLorebookMacros } = await import('../src/lorebook-macros.js');
 
     registerUtilityMacros();
+    registerCompatMacros();
     registerLogicMacros();
+    registerChatVarMacros();
     registerDateMacros();
     registerStateMacros();
     registerLorebookMacros();

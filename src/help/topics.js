@@ -35,6 +35,29 @@ export const TOPICS = Object.freeze([
         see: ['freeze', 'sticky', 'daily', 'timeofday', 'season', 'listpick', 'rollonce'],
     },
     {
+        id: 'conditions',
+        title: 'Conditions written the ordinary way',
+        body: [
+            'SillyBunny\'s {{if}} does not compare anything. It asks one question: is the condition non-empty? Empty text, "false", "off" and "0" count as no; everything else counts as yes.',
+            'That matters because a condition written the way most people would write it is text, and text is not empty. {{if::{{.hp}} > 0}} hands {{if}} the words "0 > 0", which are not empty, so the block always runs. Nothing warns you — it simply behaves as though the test passed.',
+            'Turn on "Work out comparisons in {{if}} conditions" in the Macro Enhanced settings drawer and conditions like that are worked out properly. You can use == != > >= < <= && || ! and brackets. Values with spaces should be quoted: {{if::{{.name}} == "Selphie Windsong"}}.',
+            'Conditions without a comparison are untouched, so turning this on cannot change what your existing prompts do. {{if::{{getchatvar::location}}}} still just asks whether the value is set, and {{if !personality}} still inverts.',
+            'You can also use {{expr}} directly at any time, without the setting, which is the safer choice if you only need it in one place: {{if::{{expr::{{.hp}} > 0}}}}. The setting exists for content written elsewhere that you would rather not edit.',
+        ],
+        see: ['expr', 'and', 'or', 'not', 'gt', 'eq'],
+    },
+    {
+        id: 'chat-variables',
+        title: 'Chat variables and looping over them',
+        body: [
+            '{{setchatvar}} stores a value that stays with the chat. {{getchatvar}} reads it back, {{haschatvar}} asks whether it was ever set, {{addchatvar}} adds to it, and {{deletechatvar}} removes it. They write nothing into the prompt themselves.',
+            'These are a separate store from the host\'s own {{setvar}}, on purpose. {{foreachChatVar}} walks every chat variable whose name starts with a prefix, and content that does that almost always also uses {{setvar}} for scratch values under the same prefix. Sharing one store would make those scratch values show up as loop items.',
+            'One consequence worth knowing: the built-in /getchatvar slash command is an alias for the host\'s variables and will not see these. Use /me-chatvar to read, set, list or delete them.',
+            'A loop looks like {{foreachChatVar::satiety_::p}}…{{/foreachChatVar}}. Inside, {{.p}} is the name with the prefix removed, {{.p_key}} is the full name and {{.p_value}} is the value. Names are visited in alphabetical order, so the same data always renders the same way — which is what keeps a loop from breaking prompt caching.',
+        ],
+        see: ['setchatvar', 'getchatvar', 'haschatvar', 'addchatvar', 'deletechatvar', 'foreachChatVar'],
+    },
+    {
         id: 'custom-macros',
         title: 'Writing your own macros',
         body: [

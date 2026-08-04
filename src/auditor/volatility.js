@@ -52,6 +52,11 @@ const VARIABLE_NAMES = [
     'setvarkey', 'getvarkey', 'setglobalvarkey', 'getglobalvarkey',
     'setvarindex', 'getvarindex', 'setglobalvarindex', 'getglobalvarindex',
     'jsonset',
+    // Macro Enhanced chat variables: a separate store, but the same volatility --
+    // reads and writes can differ between generations. {{foreachChatVar}} counts
+    // too, since what it emits follows whatever the store holds.
+    'setchatvar', 'addchatvar', 'getchatvar', 'haschatvar', 'chatvarexists',
+    'deletechatvar', 'flushchatvar', 'foreachchatvar',
 ];
 
 /** Known classification of core + Macro Enhanced macros, lowercased. */

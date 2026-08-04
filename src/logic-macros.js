@@ -1,4 +1,5 @@
 import { safeRegister } from './registration.js';
+import { conditionIsTrue, isCompatActive } from './compat-macros.js';
 import { CATEGORY_LIST, CATEGORY_MATH, CATEGORY_TEXT } from './utility-macros.js';
 import { JsonPathError, formatNumber, splitList, truncateText } from './utility-impl.js';
 import {
@@ -33,6 +34,18 @@ function parseIntArg(value, { warn, name, fallback = null }) {
 }
 
 const listSeparator = (separator) => (separator === undefined || separator === '' ? ',' : separator);
+
+const conditionArgs = ({ unnamedArgs, list }) => [...unnamedArgs, ...(list ?? [])];
+
+/**
+ * How {{and}} and {{or}} read one argument. Normally that is plain truthiness,
+ * matching {{if}}. With compat mode on, an argument written as an infix
+ * expression is worked out instead — otherwise `{{or::a::{{lower::$<t>}} == "x"}}`
+ * would see a non-empty string and call it true whatever the comparison says.
+ */
+function argIsTrue(value, warn) {
+    return isCompatActive() ? conditionIsTrue(value, warn) : isTruthyText(value);
+}
 
 export function registerLogicMacros() {
     // ---- comparisons (compose with {{if}}: they return "true"/"false", and the
@@ -70,7 +83,7 @@ export function registerLogicMacros() {
         returns: 'true or false',
         returnType: 'boolean',
         exampleUsage: ['{{and::{{gt::{{getvar::hp}}::0}}::{{getvar::awake}}}}'],
-        handler: ({ unnamedArgs, list }) => boolString([...unnamedArgs, ...(list ?? [])].every(isTruthyText)),
+        handler: (ctx) => boolString(conditionArgs(ctx).every(arg => argIsTrue(arg, ctx.warn))),
     });
 
     safeRegister('or', {
@@ -84,7 +97,7 @@ export function registerLogicMacros() {
         returns: 'true or false',
         returnType: 'boolean',
         exampleUsage: ['{{or::{{getvar::injured}}::{{getvar::tired}}}}'],
-        handler: ({ unnamedArgs, list }) => boolString([...unnamedArgs, ...(list ?? [])].some(isTruthyText)),
+        handler: (ctx) => boolString(conditionArgs(ctx).some(arg => argIsTrue(arg, ctx.warn))),
     });
 
     safeRegister('not', {
@@ -98,12 +111,13 @@ export function registerLogicMacros() {
     });
 
     safeRegister('isempty', {
+        aliases: [{ alias: 'blank', visible: true }],
         category: CATEGORY_LOGIC,
         unnamedArgs: [{ name: 'value', description: 'The value to check.' }],
         description: 'True when the value is empty or only whitespace.',
         returns: 'true or false',
         returnType: 'boolean',
-        exampleUsage: ['{{isempty::{{getvar::quest}}}}'],
+        exampleUsage: ['{{isempty::{{getvar::quest}}}}', '{{blank::{{getchatvar::target}}}}'],
         handler: ({ unnamedArgs: [value] }) => boolString(!String(value ?? '').trim()),
     });
 

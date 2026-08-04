@@ -1,4 +1,6 @@
 import { getRemaps } from './registration.js';
+import { getSettings, saveSettings } from './settings.js';
+import { syncCompatMode } from './compat-macros.js';
 import { getChatState, touchChatState } from './chat-state.js';
 import { renderCustomMacroManager } from './custom/editor-ui.js';
 import { renderTemplateGallery } from './custom/gallery-ui.js';
@@ -66,6 +68,8 @@ export function renderDrawer({ engineAvailable }) {
         content.appendChild(warning);
     }
 
+    renderCompatToggle(content, { engineAvailable });
+
     content.appendChild(sectionTitle('Your custom macros', 'Writing your own macros', 'custom-macros'));
     const managerHost = el('div');
     content.appendChild(managerHost);
@@ -81,6 +85,40 @@ export function renderDrawer({ engineAvailable }) {
     });
 
     renderFrozenValues(content, { engineAvailable });
+}
+
+/**
+ * The compat-mode switch. Off by default, because it changes what {{if}} means
+ * for every prompt in the app.
+ */
+function renderCompatToggle(content, drawerState) {
+    content.appendChild(sectionTitle('Conditions in {{if}}', 'Conditions written the ordinary way', 'conditions'));
+
+    const settings = getSettings();
+    const label = el('label', 'checkbox_label me-compat-toggle');
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = !!settings.compatExpressions;
+    box.addEventListener('change', () => {
+        settings.compatExpressions = box.checked;
+        saveSettings();
+        const active = syncCompatMode(box.checked);
+        if (box.checked && !active) {
+            // Only reachable if the host has no pre-processor hook; say so rather
+            // than leaving a ticked box that does nothing.
+            box.checked = false;
+            settings.compatExpressions = false;
+            saveSettings();
+        }
+        renderDrawer(drawerState);
+    });
+    label.appendChild(box);
+    label.appendChild(el('span', undefined, 'Work out comparisons in {{if}} conditions'));
+    content.appendChild(label);
+
+    content.appendChild(el('div', 'me-drawer-hint', settings.compatExpressions
+        ? 'On. {{if::{{.hp}} > 0}} compares the two values. Conditions without a comparison behave exactly as they always did.'
+        : 'Off. {{if}} only checks whether its condition is non-empty, so {{if::{{.hp}} > 0}} is always true — the text "0 > 0" is not empty. Turn this on if you use content written that way.'));
 }
 
 /** A section heading with a "?" that opens the matching guide in the reference. */

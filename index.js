@@ -5,6 +5,8 @@ import { recordCharMessage, recordGeneration, recordSwipe, recordUserMessage } f
 import { registerUtilityMacros } from './src/utility-macros.js';
 import { registerStateMacros } from './src/state-macros.js';
 import { registerLogicMacros } from './src/logic-macros.js';
+import { registerChatVarMacros } from './src/chatvar-macros.js';
+import { disableCompatMode, registerCompatMacros, syncCompatMode } from './src/compat-macros.js';
 import { registerDateMacros } from './src/date-macros.js';
 import { registerLorebookMacros } from './src/lorebook-macros.js';
 import { clearCache, prewarm, indexBook, setActiveEntries } from './src/lorebook-cache.js';
@@ -41,10 +43,14 @@ function activateMacros() {
     macrosRegistered = true;
     registerUtilityMacros();
     registerStateMacros();
+    // Before the logic pack: {{and}}/{{or}} ask compat mode how to read an argument.
+    registerCompatMacros();
     registerLogicMacros();
+    registerChatVarMacros();
     registerDateMacros();
     registerLorebookMacros();
     syncRegistrations();
+    syncCompatMode(getSettings().compatExpressions);
     const ctx = SillyTavern.getContext();
     prewarm(ctx);
 }
@@ -161,6 +167,7 @@ export function deactivate() {
 
     setCommandsActive(false);
     closeWorkbench();
+    disableCompatMode();
     teardownCustomRegistrations();
     teardownRegistrations();
     macrosRegistered = false;

@@ -89,3 +89,43 @@ test('list macro handlers', () => {
     assert.equal(badJson.result, '');
     assert.equal(badJson.warnings.length, 1);
 });
+
+test('scalar math macros', () => {
+    assert.equal(run('floor', ['3.7']).result, '3');
+    assert.equal(run('floor', ['-3.2']).result, '-4');
+    assert.equal(run('ceil', ['3.2']).result, '4');
+    assert.equal(run('min', ['0', '-5']).result, '-5');
+    assert.equal(run('max', ['0', '-5']).result, '0');
+    assert.equal(run('mod', ['1450', '1440']).result, '10');
+    assert.equal(run('mod', ['-1', '3']).result, '-1', 'JS remainder semantics');
+
+    const byZero = run('mod', ['5', '0']);
+    assert.equal(byZero.result, '5', 'passes the value through rather than throwing');
+    assert.equal(byZero.warnings.length, 1);
+
+    const bad = run('floor', ['abc']);
+    assert.equal(bad.result, 'abc');
+    assert.equal(bad.warnings.length, 1);
+});
+
+test('split and wrap resolve their own arguments, so {{space}} survives', () => {
+    // These are on the lazy path: arguments arrive raw and the handler resolves
+    // them. A resolve stub stands in for the engine expanding {{space}}.
+    const resolve = (text) => (text === '{{space}}' ? ' ' : text);
+    const lazy = (name, args) => {
+        const definition = registry.getMacro(name);
+        const { context, warnings } = makeExecutionContext({ unnamedArgs: args, resolve });
+        return { result: definition.handler(context), warnings };
+    };
+
+    assert.equal(lazy('split', ['Selphie Windsong', '{{space}}', '0']).result, 'Selphie');
+    assert.equal(lazy('split', ['Selphie Windsong', '{{space}}', '1']).result, 'Windsong');
+    assert.equal(lazy('split', ['Ren', '{{space}}', '1']).result, '', 'past the end is empty');
+    assert.equal(lazy('split', ['a,b,c', ',', '-1']).result, 'c');
+    // An empty separator means a space: the lexer makes a literal one impossible.
+    assert.equal(lazy('split', ['Selphie Windsong', '', '1']).result, 'Windsong');
+
+    assert.equal(lazy('wrap', ['{{space}}', '', 'Windsong']).result, ' Windsong');
+    assert.equal(lazy('wrap', ['{{space}}', '', '']).result, '', 'nothing at all when the value is empty');
+    assert.equal(lazy('wrap', [' (', ')', 'Captain']).result, ' (Captain)');
+});

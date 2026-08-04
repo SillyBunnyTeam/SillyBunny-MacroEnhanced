@@ -6,7 +6,7 @@
  */
 import { MODULE_NAME } from './settings.js';
 
-export const CHAT_STATE_VERSION = 1;
+export const CHAT_STATE_VERSION = 2;
 
 /** The four maps that hold stored macro values, keyed by user-chosen key. */
 export const VALUE_KINDS = Object.freeze(['frozen', 'sticky', 'daily', 'rolls']);
@@ -18,13 +18,18 @@ export function emptyState() {
         sticky: {},
         daily: {},
         rolls: {},
+        chatVars: {},
         counters: { userMessages: 0, charMessages: 0, swipes: 0, generations: 0, firstSeenAt: Date.now() },
         customMacros: [],
     };
 }
 
 function migrate(state) {
-    // v1 is the first schema; future migrations chain here.
+    // v1 -> v2: added chatVars, the {{setchatvar}} namespace. Deliberately its own
+    // map rather than the host's chat_metadata.variables: content routinely stores
+    // scratch values with {{setvar}} under the same prefixes {{foreachChatVar}}
+    // iterates, and a shared namespace would let those scratch keys show up as
+    // loop items.
     state.version = CHAT_STATE_VERSION;
     return state;
 }
@@ -34,6 +39,9 @@ function repair(state) {
         if (!state[kind] || typeof state[kind] !== 'object' || Array.isArray(state[kind])) {
             state[kind] = {};
         }
+    }
+    if (!state.chatVars || typeof state.chatVars !== 'object' || Array.isArray(state.chatVars)) {
+        state.chatVars = {};
     }
     if (!state.counters || typeof state.counters !== 'object') {
         state.counters = emptyState().counters;

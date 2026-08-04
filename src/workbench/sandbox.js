@@ -212,6 +212,11 @@ export function flattenChatState(state) {
             flat[`${kind}:${key}`] = String(entry?.value ?? '');
         }
     }
+    // Chat vars are a flat map rather than {value} entries, so they flatten on
+    // their own; without this the sandbox would miss a leaked {{setchatvar}}.
+    for (const [key, value] of Object.entries(state?.chatVars ?? {})) {
+        flat[`chatvar:${key}`] = String(value ?? '');
+    }
     for (const [key, value] of Object.entries(state?.counters ?? {})) {
         if (key !== 'firstSeenAt') {
             flat[`counter:${key}`] = String(value);

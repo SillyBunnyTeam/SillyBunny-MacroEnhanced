@@ -1,12 +1,13 @@
 export const MODULE_NAME = 'MacroEnhanced';
 
-const SETTINGS_VERSION = 2;
+const SETTINGS_VERSION = 3;
 
 function defaultSettings() {
     return {
         settingsVersion: SETTINGS_VERSION,
         customMacros: [],
         auditor: { manualCachingAtDepth: null },
+        compatExpressions: false,
     };
 }
 
@@ -14,6 +15,11 @@ function migrate(settings) {
     // v1 -> v2: added the Cache Auditor preferences.
     if (!settings.auditor || typeof settings.auditor !== 'object') {
         settings.auditor = { manualCachingAtDepth: null };
+    }
+    // v2 -> v3: added compat mode. Off for existing installs -- it changes what
+    // {{if}} means, so it is never turned on behind someone's back.
+    if (typeof settings.compatExpressions !== 'boolean') {
+        settings.compatExpressions = false;
     }
     settings.settingsVersion = SETTINGS_VERSION;
     return settings;
@@ -37,6 +43,9 @@ export function getSettings() {
     }
     if (!settings.auditor || typeof settings.auditor !== 'object') {
         settings.auditor = { manualCachingAtDepth: null };
+    }
+    if (typeof settings.compatExpressions !== 'boolean') {
+        settings.compatExpressions = false;
     }
 
     return settings;
