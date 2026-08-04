@@ -5,7 +5,9 @@
     "type": "module",
     "description": "SillyBunny extension that enhances the experimental macro engine.",
     "scripts": {
-        "test": "node --test test/*.test.js"
+        "test": "node --test test/*.test.js",
+        "docs": "node scripts/gen-readme.js",
+        "docs:check": "node scripts/gen-readme.js --check"
     },
     "engines": {
         "node": ">=20"

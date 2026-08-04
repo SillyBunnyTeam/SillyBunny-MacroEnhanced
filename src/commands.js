@@ -9,6 +9,7 @@ import { createSandbox } from './workbench/sandbox.js';
 import { openWorkbench } from './workbench/panel.js';
 import { formatAuditReport, runAudit } from './auditor/audit.js';
 import { exportPack } from './custom/pack.js';
+import { clearCommandDocs, recordCommand } from './catalog.js';
 
 let commandsRegistered = false;
 let extensionActive = true;
@@ -57,6 +58,7 @@ export function registerCommands() {
     if (registeredParser !== SlashCommandParser) {
         registeredParser = SlashCommandParser;
         registeredCommandNames.clear();
+        clearCommandDocs();
         commandsRegistered = false;
     }
     if (commandsRegistered) {
@@ -69,6 +71,7 @@ export function registerCommands() {
         }
         SlashCommandParser.addCommandObject(command);
         registeredCommandNames.add(command.name);
+        recordCommand(command);
     };
 
     try {

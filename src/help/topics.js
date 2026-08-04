@@ -1,0 +1,121 @@
+/**
+ * The written guides shown at the top of the Reference tab.
+ *
+ * Macro descriptions explain what one macro does. These explain the things no
+ * single macro description can: why the cache-friendly macros exist at all,
+ * which scope wins when two macros share a name, what the sandbox does and does
+ * not save. Without them the reference answers "how do I call this" but not
+ * "why would I".
+ *
+ * Data only -- installed like the template packs (src/templates/*.js). `see`
+ * lists macro names that become links into the macro index below.
+ */
+
+export const TOPICS = Object.freeze([
+    {
+        id: 'getting-started',
+        title: 'Getting started',
+        body: [
+            'Macro Enhanced adds macros to SillyBunny\'s experimental macro engine. They work anywhere ordinary macros do: preset prompts, character cards, lorebook entries, and your own messages.',
+            'Everything on this page can be tried without consequences. Open the Playground tab, type a macro, and the result appears as you type — nothing you do there touches a real variable or a saved value.',
+            'Three places to look: this reference for what exists, the Playground for trying it, and the Cache Audit for finding macros that are quietly costing you money.',
+        ],
+        see: ['upper', 'calc', 'freeze'],
+    },
+    {
+        id: 'prompt-caching',
+        title: 'Why prompt caching matters',
+        body: [
+            'Every generation re-sends your presets, character card, lorebooks and chat history to the model. Providers discount that re-sent text heavily — but only when it arrives byte-for-byte identical to last time.',
+            'Macros are re-evaluated on every generation, so a single changing value near the top of the prompt rewrites it and cancels the discount. One {{time}} in a character card is enough to lose it every minute.',
+            'The state macros give you the same flavour without the churn. {{freeze}} evaluates something once and returns that answer forever after; {{sticky}} refreshes every N messages; {{daily}} refreshes once a day. Their values are stored inside the chat and survive reloads.',
+            'Where a value has to vary, prefer the coarse version: {{timeofday}} instead of {{time}}, {{season}} instead of {{date}}, {{listpick}} instead of {{random}}, {{rollonce}} instead of {{roll}}.',
+            'The Cache Audit tab scans your actual setup and tells you which macros are breaking it, and which are sitting harmlessly far enough down the prompt not to matter.',
+        ],
+        see: ['freeze', 'sticky', 'daily', 'timeofday', 'season', 'listpick', 'rollonce'],
+    },
+    {
+        id: 'custom-macros',
+        title: 'Writing your own macros',
+        body: [
+            'A custom macro is a name plus a template — the text it expands to. No coding. Open Extensions → Macro Enhanced → Your custom macros.',
+            'Templates can use other macros, including this extension\'s. A macro named "greet" with the template "Hello {{user}}, it is {{timeofday}}." expands wherever you write {{greet}}.',
+            'Arguments are optional. Add an argument named "who" and it becomes available inside the template as {{who}} — or as {{arg1}} by position. Callers pass values with the :: separator: {{greet::Alice}}. Optional arguments can have a default.',
+            'The editor shows the exact call signature as you type, checks the name as you go, and "Test in Workbench" saves the macro and opens it in the Playground.',
+            'A macro that includes itself is stopped with a console warning rather than looping forever.',
+        ],
+        see: [],
+    },
+    {
+        id: 'scopes',
+        title: 'Where custom macros are saved',
+        body: [
+            'Every custom macro is saved in one of three places. Global macros are available everywhere. Character macros exist only while that character is open, and travel with the character card when you share it. Chat macros exist only inside one chat, stored in the chat file itself.',
+            'When the same name exists in more than one scope, the most specific wins: chat beats character, character beats global. That is how you override one global macro for a single scene without touching it everywhere else.',
+            'Names are checked as you type. You cannot take a name belonging to another extension, one of this extension\'s built-ins, or anything starting with "me-" — that prefix is reserved.',
+        ],
+        see: [],
+    },
+    {
+        id: 'sandbox',
+        title: 'What the Workbench does and does not save',
+        body: [
+            'The Playground is sandboxed. Variable macros write to a throwaway copy, and the state macros ({{freeze}}, {{sticky}}, {{daily}}, {{rollonce}}) do too — so previewing a frozen value does not freeze it for real.',
+            'The panel on the right lists every chat and global variable, plus the changes your text would have made if it ran for real, shown as "hp: 50 → 35". "Reset sandbox" throws those pending changes away.',
+            'One caveat worth knowing: the shorthand writes ({{.x = 5}}, {{$y++}}) reach past the sandbox, so they touch the real value for a split second before being put back. Another extension watching for variable changes at that exact moment could notice.',
+            'Counters like {{usermsgcount}} are never bumped by evaluation, in the Playground or anywhere else — they only move on real chat events.',
+        ],
+        see: ['freeze', 'usermsgcount'],
+    },
+    {
+        id: 'nesting-and-args',
+        title: 'Arguments, nesting and truthiness',
+        body: [
+            'Arguments are separated by :: — so a literal :: cannot appear inside one. That is an engine limitation, not something this extension can work around.',
+            'Macros nest freely: {{calc::max({{getvar::hp}}, 0)}} resolves the inner macro first. Nesting inside a {{switch}} branch is lazy — only the winning branch\'s macros ever run.',
+            'The comparison macros return the literal text "true" or "false", which is exactly what {{if}} expects, so they slot straight in: {{if {{gt::{{getvar::hp}}::0}}}}…{{/if}}.',
+            'For {{if}} and the logic macros, a value counts as false when it is empty, "off", "false" or "0" after trimming. Everything else is true.',
+        ],
+        see: ['switch', 'eq', 'gt', 'and', 'calc'],
+    },
+    {
+        id: 'lorebook-lookup',
+        title: 'How lorebook entries are found',
+        body: [
+            'Entries are looked up by their title (the memo/comment field) or by uid. Without an explicit book, they are searched in order: the chat lorebook first, then the character\'s books, then the global books.',
+            'Add a book name as the second argument to target one directly: {{lore::Kingdom::My World}}.',
+            'Books load in the background, so immediately after opening a chat the first use of a book can come back empty. It works from the next evaluation onward — this is normal, not a failure.',
+        ],
+        see: ['lore', 'lorekeys', 'loreexists', 'lorebooks'],
+    },
+    {
+        id: 'name-collisions',
+        title: 'When SillyBunny claims a name',
+        body: [
+            'If a future SillyBunny update ships a macro with the same name as one of this extension\'s, the extension steps aside rather than overwriting it. Its own version is renamed with a "me-" prefix, and the settings panel says which ones moved.',
+            'Every macro also has a hidden me- alias from day one. Writing {{me-count}} instead of {{count}} means your prompts keep working no matter what upstream does later.',
+            'The same protection runs the other way: this extension never takes a name another extension already registered.',
+        ],
+        see: [],
+    },
+    {
+        id: 'packs-and-gallery',
+        title: 'Template gallery and sharing',
+        body: [
+            'The template gallery ships four starter packs — RP state trackers, dice and game mechanics, prompt-style guards, and time and scene helpers. Installing one copies its macros into whichever scope you pick, where they become ordinary custom macros you can open and edit.',
+            'Nothing is ever overwritten. A name that already exists gets a -2 suffix instead.',
+            'Custom macros can be exported per scope as a small JSON pack file and imported on another machine or shared with someone else. /me-export scope=chat prints the same JSON for scripting.',
+        ],
+        see: [],
+    },
+]);
+
+/**
+ * One guide by id.
+ *
+ * @param {string} id
+ * @returns {object|undefined}
+ */
+export function getTopic(id) {
+    return TOPICS.find(topic => topic.id === id);
+}

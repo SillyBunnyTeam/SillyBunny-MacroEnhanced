@@ -155,9 +155,29 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
         nameInput.value = def.name;
         form.appendChild(labeledField('Name', nameInput));
 
+        // How you actually call the thing, kept correct as the name and
+        // arguments change — the question the editor never used to answer.
+        const signature = el('div', 'me-custom-signature');
+        form.appendChild(signature);
+        const updateSignature = () => {
+            const name = nameInput.value.trim();
+            if (!name) {
+                signature.textContent = 'Name it, and the way to call it appears here.';
+                signature.classList.add('me-custom-signature-empty');
+                return;
+            }
+            signature.classList.remove('me-custom-signature-empty');
+            const args = def.args
+                .filter(arg => String(arg.name ?? '').trim())
+                .map(arg => (arg.optional ? `::[${arg.name.trim()}]` : `::${arg.name.trim()}`))
+                .join('');
+            signature.textContent = `Call it as  {{${name}${args}}}`;
+        };
+        nameInput.addEventListener('input', updateSignature);
+
         const descInput = document.createElement('input');
         descInput.className = 'text_pole';
-        descInput.placeholder = 'Shown in the macro help browser';
+        descInput.placeholder = 'Shown in the macro reference and /help macros';
         descInput.value = def.description;
         form.appendChild(labeledField('Description', descInput));
 
@@ -215,6 +235,7 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
                 argName.value = arg.name ?? '';
                 argName.addEventListener('input', () => {
                     arg.name = argName.value;
+                    updateSignature();
                     scheduleValidation();
                 });
                 argRow.appendChild(argName);
@@ -226,6 +247,7 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
                 optional.setAttribute('aria-label', `Argument ${index + 1} is optional`);
                 optional.addEventListener('change', () => {
                     arg.optional = optional.checked;
+                    updateSignature();
                     scheduleValidation();
                 });
                 argRow.appendChild(optional);
@@ -239,9 +261,20 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
                 defaultValue.addEventListener('input', () => { arg.defaultValue = defaultValue.value; });
                 argRow.appendChild(defaultValue);
 
+                // Already carried by the data model, the pack format and
+                // compileDef — it just had nowhere to be typed.
+                const argDesc = document.createElement('input');
+                argDesc.className = 'text_pole me-custom-arg-desc';
+                argDesc.placeholder = 'what this argument is for (optional)';
+                argDesc.setAttribute('aria-label', `Argument ${index + 1} description`);
+                argDesc.value = arg.description ?? '';
+                argDesc.addEventListener('input', () => { arg.description = argDesc.value; });
+                argRow.appendChild(argDesc);
+
                 const removeArg = button('menu_button me-custom-button', '×', () => {
                     def.args.splice(index, 1);
                     renderArgs();
+                    updateSignature();
                     scheduleValidation();
                 });
                 removeArg.title = 'Remove argument';
@@ -258,6 +291,7 @@ export function renderCustomMacroManager(container, { onTestInWorkbench } = {}) 
             argsHost.appendChild(addArg);
         };
         renderArgs();
+        updateSignature();
         form.appendChild(argsHost);
 
         const scopeRow = el('label', 'me-custom-scope-row');

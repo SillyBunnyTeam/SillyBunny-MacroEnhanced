@@ -106,6 +106,7 @@
 .me-custom-arg-row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 5px;
 }
 
@@ -394,4 +395,278 @@
     color: var(--warning, #f0ad4e);
     font-size: calc(var(--mainFontSize, 1rem) * 0.8);
     margin-top: 6px;
+}
+
+/* ---- shared help affordance ---- */
+
+.me-help-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35em;
+    height: 1.35em;
+    margin-left: 6px;
+    border: 1px solid var(--SmartThemeBorderColor, #444);
+    border-radius: 50%;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.75);
+    line-height: 1;
+    opacity: 0.7;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.me-help-button:hover {
+    opacity: 1;
+    border-color: var(--SmartThemeQuoteColor, #7aa2f7);
+}
+
+/* ---- macro reference ---- */
+
+.me-drawer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.me-ref-controls {
+    display: flex;
+    gap: 6px;
+    margin: 6px 0;
+}
+
+.me-ref-search {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.me-ref-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.me-ref-chip {
+    padding: 2px 8px;
+    border: 1px solid var(--SmartThemeBorderColor, #444);
+    border-radius: 10px;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.8);
+    opacity: 0.75;
+    cursor: pointer;
+}
+
+.me-ref-chip:hover {
+    opacity: 1;
+}
+
+.me-ref-chip-active {
+    opacity: 1;
+    border-color: var(--SmartThemeQuoteColor, #7aa2f7);
+    color: var(--SmartThemeQuoteColor, #7aa2f7);
+}
+
+.me-ref-results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.me-ref-group-head,
+.me-ref-item-head {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.me-ref-group-head {
+    font-weight: bold;
+    padding: 2px 0;
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #444);
+}
+
+.me-ref-marker {
+    flex: 0 0 auto;
+    opacity: 0.7;
+}
+
+.me-ref-group-count {
+    font-size: calc(var(--mainFontSize, 1rem) * 0.8);
+    opacity: 0.6;
+    font-weight: normal;
+}
+
+.me-ref-group-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0 0 4px;
+}
+
+.me-ref-item-head {
+    padding: 3px 4px;
+    border-radius: 4px;
+}
+
+.me-ref-item-head:hover {
+    background: var(--black30a, rgba(255, 255, 255, 0.05));
+}
+
+.me-ref-item-label {
+    flex: 0 0 auto;
+    font-family: var(--monoFontFamily, monospace);
+    font-size: calc(var(--mainFontSize, 1rem) * 0.9);
+}
+
+/* Guide titles are prose, not something you type. */
+.me-ref-item-title {
+    flex: 0 0 auto;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.9);
+    font-weight: 600;
+}
+
+.me-ref-item-summary {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.8);
+    opacity: 0.65;
+}
+
+.me-ref-item-body {
+    padding: 4px 4px 10px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.me-ref-description {
+    font-size: calc(var(--mainFontSize, 1rem) * 0.9);
+}
+
+.me-ref-paragraph {
+    margin: 0;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.9);
+    line-height: 1.45;
+}
+
+.me-ref-args {
+    border-collapse: collapse;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+}
+
+.me-ref-args td {
+    padding: 2px 8px 2px 0;
+    vertical-align: top;
+}
+
+.me-ref-arg-name {
+    font-family: var(--monoFontFamily, monospace);
+    white-space: nowrap;
+}
+
+.me-ref-arg-note {
+    opacity: 0.6;
+    white-space: nowrap;
+}
+
+.me-ref-arg-desc {
+    opacity: 0.85;
+}
+
+.me-ref-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.8);
+}
+
+.me-ref-returns {
+    opacity: 0.75;
+}
+
+.me-ref-badge {
+    padding: 1px 6px;
+    border: 1px solid var(--SmartThemeBorderColor, #444);
+    border-radius: 8px;
+    opacity: 0.7;
+}
+
+.me-ref-example {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.me-ref-example-text,
+.me-ref-code {
+    font-family: var(--monoFontFamily, monospace);
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: var(--black30a, rgba(255, 255, 255, 0.06));
+    overflow-wrap: anywhere;
+}
+
+.me-ref-example-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.me-ref-see {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.me-ref-link {
+    font-family: var(--monoFontFamily, monospace);
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+    color: var(--SmartThemeQuoteColor, #7aa2f7);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+/* Brief highlight so a cross-link or "?" jump shows where it landed. */
+.me-ref-flash {
+    animation: me-ref-flash 1.2s ease-out;
+}
+
+@keyframes me-ref-flash {
+    from {
+        background: var(--SmartThemeQuoteColor, #7aa2f7);
+    }
+    to {
+        background: transparent;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .me-ref-flash {
+        animation: none;
+        outline: 2px solid var(--SmartThemeQuoteColor, #7aa2f7);
+    }
+}
+
+/* ---- custom macro editor additions ---- */
+
+.me-custom-signature {
+    font-family: var(--monoFontFamily, monospace);
+    font-size: calc(var(--mainFontSize, 1rem) * 0.85);
+    opacity: 0.8;
+    padding: 2px 0;
+}
+
+.me-custom-signature-empty {
+    font-family: inherit;
+    opacity: 0.55;
+}
+
+.me-custom-arg-desc {
+    flex: 1 1 12em;
+    min-width: 8em;
 }

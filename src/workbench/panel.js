@@ -1,53 +1,16 @@
 import { isEngineAvailable } from '../engine-gate.js';
 import { getChatState } from '../chat-state.js';
-import { button, el } from '../dom.js';
+import { button, copyToClipboard, el, flashButtonText, helpButton } from '../dom.js';
 import { createSandbox, findUnshadowedVariableMacros } from './sandbox.js';
 import { renderInspector } from './inspector.js';
 import { extractMacroInfos, runTrace } from './trace.js';
 import { renderAuditorTab } from '../auditor/auditor-ui.js';
+import { renderReferenceTab } from '../help/reference-ui.js';
 
 const EVAL_DEBOUNCE_MS = 300;
 const ENGINE_OFF_NOTICE = 'The Macro Workbench needs the Experimental Macro Engine. Turn it on under User Settings → Experimental Macro Engine.';
 
 let openPopup = null;
-
-async function copyToClipboard(text) {
-    try {
-        if (navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(text);
-            return true;
-        }
-    } catch {
-        // Insecure origin or permission denied — try the legacy path.
-    }
-    try {
-        const scratch = document.createElement('textarea');
-        scratch.value = text;
-        scratch.style.position = 'fixed';
-        scratch.style.opacity = '0';
-        document.body.appendChild(scratch);
-        scratch.select();
-        const ok = document.execCommand('copy');
-        scratch.remove();
-        return ok;
-    } catch {
-        return false;
-    }
-}
-
-function flashButtonText(node, text, revertMs = 1500) {
-    if (node.dataset.flashTimer) {
-        clearTimeout(Number(node.dataset.flashTimer));
-    } else {
-        node.dataset.originalText = node.textContent;
-    }
-    node.textContent = text;
-    node.dataset.flashTimer = String(setTimeout(() => {
-        node.textContent = node.dataset.originalText ?? text;
-        delete node.dataset.flashTimer;
-        delete node.dataset.originalText;
-    }, revertMs));
-}
 
 function evaluateSandboxed(ctx, sandbox, input) {
     return sandbox.run((text, dynamicMacros) => {
@@ -81,8 +44,11 @@ export function closeWorkbench() {
  *
  * @param {object} [options]
  * @param {string} [options.initialText] - Pre-filled playground text.
+ * @param {string} [options.tab] - Tab to open on ('Playground' by default).
+ * @param {string} [options.topic] - Guide to reveal in the Reference tab.
+ * @param {string} [options.macro] - Macro to reveal in the Reference tab.
  */
-export async function openWorkbench({ initialText = '' } = {}) {
+export async function openWorkbench({ initialText = '', tab = 'Playground', topic = '', macro = '' } = {}) {
     const ctx = SillyTavern.getContext();
     if (openPopup) {
         return;
@@ -121,22 +87,25 @@ export async function openWorkbench({ initialText = '' } = {}) {
     const tabs = el('div', 'me-workbench-tabs');
     root.appendChild(tabs);
     const views = new Map();
+    const activateTab = (name) => {
+        const target = views.get(name) ?? views.get('Playground');
+        for (const [, { tab: otherTab, view: otherView }] of views) {
+            otherTab.classList.remove('me-workbench-tab-active');
+            otherView.style.display = 'none';
+        }
+        target.tab.classList.add('me-workbench-tab-active');
+        target.view.style.display = '';
+    };
     const addTab = (name) => {
         const view = el('div', 'me-workbench-view');
-        const tab = button('menu_button me-workbench-tab', name, () => {
-            for (const [, { tab: otherTab, view: otherView }] of views) {
-                otherTab.classList.remove('me-workbench-tab-active');
-                otherView.style.display = 'none';
-            }
-            tab.classList.add('me-workbench-tab-active');
-            view.style.display = '';
-        });
+        const tab = button('menu_button me-workbench-tab', name, () => activateTab(name));
         tabs.appendChild(tab);
         root.appendChild(view);
         views.set(name, { tab, view });
         return view;
     };
     const playgroundView = addTab('Playground');
+    const referenceView = addTab('Reference');
     const auditView = addTab('Cache Audit');
     const traceView = addTab('Trace');
 
@@ -150,6 +119,7 @@ export async function openWorkbench({ initialText = '' } = {}) {
             });
             return (text) => evaluateSandboxed(liveCtx, auditSandbox, text);
         },
+        onHelp: () => openGuide('prompt-caching'),
     });
 
     const columns = el('div', 'me-workbench-columns');
@@ -194,8 +164,10 @@ export async function openWorkbench({ initialText = '' } = {}) {
         'Sandboxed — nothing is saved. Variable macros and frozen values ({{freeze}}, {{sticky}}, …) write to a throwaway copy; {{.var}} shorthand changes are reverted after each preview. Ctrl+Enter evaluates immediately.'));
 
     // ---- Trace tab: per-span timing of the Playground text ----
-    traceView.appendChild(el('div', 'me-audit-intro',
-        'Evaluates the Playground text one macro span at a time (sandboxed, sharing the Playground\'s variable state) and shows what each span produced and how long it took. Macros nested inside a span are not timed individually.'));
+    const traceIntro = el('div', 'me-audit-intro',
+        'Evaluates the Playground text one macro span at a time (sandboxed, sharing the Playground\'s variable state) and shows what each span produced and how long it took. Macros nested inside a span are not timed individually.');
+    traceIntro.appendChild(helpButton('What the Workbench does and does not save', () => openGuide('sandbox')));
+    traceView.appendChild(traceIntro);
     const traceResults = el('div', 'me-trace-results');
     traceView.appendChild(button('menu_button', 'Trace Playground text', () => {
         traceResults.innerHTML = '';
@@ -231,10 +203,28 @@ export async function openWorkbench({ initialText = '' } = {}) {
     }));
     traceView.appendChild(traceResults);
 
-    // Start on the Playground tab.
-    views.get('Playground').tab.classList.add('me-workbench-tab-active');
-    auditView.style.display = 'none';
-    traceView.style.display = 'none';
+    // ---- Reference tab: the documentation, next door to the Playground ----
+    const reference = renderReferenceTab(referenceView, {
+        onInsert: (example) => {
+            input.value = input.value.trim() ? `${input.value.replace(/\s+$/, '')}\n${example}` : example;
+            activateTab('Playground');
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+            evaluateNow();
+        },
+    });
+
+    const openGuide = (id) => {
+        activateTab('Reference');
+        reference.focusTopic(id);
+    };
+
+    activateTab(tab);
+    if (topic) {
+        reference.focusTopic(topic);
+    } else if (macro) {
+        reference.focusMacro(macro);
+    }
 
     const refreshInspector = () => {
         const liveCtx = SillyTavern.getContext();
