@@ -11,6 +11,7 @@ const { registerLogicMacros } = await import('../src/logic-macros.js');
 const { registerDateMacros } = await import('../src/date-macros.js');
 const { registerStateMacros } = await import('../src/state-macros.js');
 const { registerLorebookMacros } = await import('../src/lorebook-macros.js');
+const { registerPronounMacros } = await import('../src/pronoun-macros.js');
 
 let registry;
 
@@ -127,6 +128,7 @@ test('every built-in macro is fully documented', () => {
     registerDateMacros();
     registerStateMacros();
     registerLorebookMacros();
+    registerPronounMacros();
 
     const catalog = getMacroCatalog();
     assert.ok(catalog.length >= 70, `expected the full macro set, got ${catalog.length}`);

@@ -9,6 +9,7 @@ import { registerChatVarMacros } from './src/chatvar-macros.js';
 import { disableCompatMode, registerCompatMacros, syncCompatMode } from './src/compat-macros.js';
 import { registerDateMacros } from './src/date-macros.js';
 import { registerLorebookMacros } from './src/lorebook-macros.js';
+import { registerPronounMacros } from './src/pronoun-macros.js';
 import { clearCache, prewarm, indexBook, setActiveEntries } from './src/lorebook-cache.js';
 import { syncRegistrations, teardownCustomRegistrations } from './src/custom/registrar.js';
 import { registerCommands, setCommandsActive } from './src/commands.js';
@@ -49,6 +50,7 @@ function activateMacros() {
     registerChatVarMacros();
     registerDateMacros();
     registerLorebookMacros();
+    registerPronounMacros();
     syncRegistrations();
     syncCompatMode(getSettings().compatExpressions);
     const ctx = SillyTavern.getContext();

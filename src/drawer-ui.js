@@ -2,6 +2,7 @@ import { getRemaps } from './registration.js';
 import { getSettings, saveSettings } from './settings.js';
 import { syncCompatMode } from './compat-macros.js';
 import { getChatState, touchChatState } from './chat-state.js';
+import { renderPronounSettings } from './pronoun-ui.js';
 import { renderCustomMacroManager } from './custom/editor-ui.js';
 import { renderTemplateGallery } from './custom/gallery-ui.js';
 import { openWorkbench } from './workbench/panel.js';
@@ -69,6 +70,11 @@ export function renderDrawer({ engineAvailable }) {
     }
 
     renderCompatToggle(content, { engineAvailable });
+
+    content.appendChild(sectionTitle('Pronouns', 'Pronouns', 'pronouns'));
+    const pronounHost = el('div');
+    content.appendChild(pronounHost);
+    renderPronounSettings(pronounHost, () => renderDrawer({ engineAvailable }));
 
     content.appendChild(sectionTitle('Your custom macros', 'Writing your own macros', 'custom-macros'));
     const managerHost = el('div');

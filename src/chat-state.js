@@ -6,7 +6,7 @@
  */
 import { MODULE_NAME } from './settings.js';
 
-export const CHAT_STATE_VERSION = 2;
+export const CHAT_STATE_VERSION = 3;
 
 /** The four maps that hold stored macro values, keyed by user-chosen key. */
 export const VALUE_KINDS = Object.freeze(['frozen', 'sticky', 'daily', 'rolls']);
@@ -21,6 +21,7 @@ export function emptyState() {
         chatVars: {},
         counters: { userMessages: 0, charMessages: 0, swipes: 0, generations: 0, firstSeenAt: Date.now() },
         customMacros: [],
+        pronouns: { user: '', char: '' },
     };
 }
 
@@ -30,6 +31,9 @@ function migrate(state) {
     // scratch values with {{setvar}} under the same prefixes {{foreachChatVar}}
     // iterates, and a shared namespace would let those scratch keys show up as
     // loop items.
+    //
+    // v2 -> v3: added pronouns, the {{setpronouns}} per-chat override. repair()
+    // creates it, so there is nothing to convert.
     state.version = CHAT_STATE_VERSION;
     return state;
 }
@@ -56,6 +60,9 @@ function repair(state) {
     }
     if (!Array.isArray(state.customMacros)) {
         state.customMacros = [];
+    }
+    if (!state.pronouns || typeof state.pronouns !== 'object' || Array.isArray(state.pronouns)) {
+        state.pronouns = { user: '', char: '' };
     }
     return state;
 }

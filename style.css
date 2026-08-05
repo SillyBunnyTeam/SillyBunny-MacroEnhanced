@@ -87,6 +87,32 @@
     opacity: 0.7;
 }
 
+/* ---- pronouns ---- */
+
+.me-pronoun-subject {
+    margin-top: 8px;
+    font-size: calc(var(--mainFontSize, 1rem) * 0.9);
+    opacity: 0.8;
+}
+
+.me-pronoun-presets,
+.me-pronoun-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 4px 0;
+}
+
+.me-pronoun-input {
+    flex: 1 1 12em;
+    min-width: 0;
+}
+
+.me-pronoun-preview {
+    font-style: italic;
+}
+
 /* Keyboard focus for our div-based buttons (mouse clicks don't trigger it). */
 #me-settings-drawer [role='button']:focus-visible,
 .me-workbench [role='button']:focus-visible {
