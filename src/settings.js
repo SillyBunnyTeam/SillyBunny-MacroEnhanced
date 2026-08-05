@@ -1,6 +1,6 @@
 export const MODULE_NAME = 'MacroEnhanced';
 
-const SETTINGS_VERSION = 3;
+const SETTINGS_VERSION = 4;
 
 function defaultSettings() {
     return {
@@ -8,7 +8,18 @@ function defaultSettings() {
         customMacros: [],
         auditor: { manualCachingAtDepth: null },
         compatExpressions: false,
+        pronouns: { personas: {} },
     };
+}
+
+/** Pronoun specs keyed by persona avatar id, repaired in place. */
+function repairPronouns(settings) {
+    if (!settings.pronouns || typeof settings.pronouns !== 'object') {
+        settings.pronouns = { personas: {} };
+    }
+    if (!settings.pronouns.personas || typeof settings.pronouns.personas !== 'object' || Array.isArray(settings.pronouns.personas)) {
+        settings.pronouns.personas = {};
+    }
 }
 
 function migrate(settings) {
@@ -21,6 +32,9 @@ function migrate(settings) {
     if (typeof settings.compatExpressions !== 'boolean') {
         settings.compatExpressions = false;
     }
+    // v3 -> v4: added persona pronouns. Nothing to convert; an install with no
+    // pronouns set behaves exactly as it did, since unset means they/them.
+    repairPronouns(settings);
     settings.settingsVersion = SETTINGS_VERSION;
     return settings;
 }
@@ -47,6 +61,7 @@ export function getSettings() {
     if (typeof settings.compatExpressions !== 'boolean') {
         settings.compatExpressions = false;
     }
+    repairPronouns(settings);
 
     return settings;
 }

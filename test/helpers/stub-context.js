@@ -72,6 +72,7 @@ export function installStubContext(overrides = {}) {
         chatId: 'stub-chat',
         characters: [],
         characterId: undefined,
+        userAvatar: 'stub-persona.png',
         getRequestHeaders: () => ({}),
         variables: { local: makeVarApi(localVars), global: makeVarApi(globalVars) },
         saveSettingsDebounced: () => {},
@@ -106,7 +107,7 @@ export function installStubContext(overrides = {}) {
 }
 
 /** Fake MacroExecutionContext for calling handlers directly. */
-export function makeExecutionContext({ unnamedArgs = [], list = null, env = {}, resolve } = {}) {
+export function makeExecutionContext({ unnamedArgs = [], list = null, env = {}, resolve, raw = '' } = {}) {
     const warnings = [];
     return {
         context: {
@@ -117,8 +118,10 @@ export function makeExecutionContext({ unnamedArgs = [], list = null, env = {}, 
             namedArgs: null,
             flags: {},
             isScoped: false,
-            raw: '',
-            rawOriginal: '',
+            // The text between the braces, starting with the name as it was typed.
+            // {{Sub}} and {{sub}} share a handler, so this is where the casing lives.
+            raw,
+            rawOriginal: raw ? `{{${raw}}}` : '',
             rawArgs: unnamedArgs,
             env: { dynamicMacros: {}, ...env },
             cstNode: null,

@@ -1,15 +1,16 @@
 # Macro Enhanced
 
-A SillyBunny extension that adds eight things to the experimental macro engine:
+A SillyBunny extension that adds nine things to the experimental macro engine:
 
 1. Utility macros for text, math, lists, dates and JSON.
 2. Logic macros: comparisons, and/or/not, and a `{{switch}}` with lazy branches.
 3. Cache-friendly state macros (`{{freeze}}`, `{{sticky}}`, `{{daily}}`, …) that keep prompts byte-stable for prompt caching, plus a Cache Auditor that finds what's breaking it.
 4. Lorebook macros that pull World Info content and metadata into a prompt.
-5. Custom macros you define yourself, no coding needed — global, per character, or per chat.
-6. A template gallery of ready-made macros, and shareable macro packs (JSON import/export).
-7. A sandboxed Macro Workbench with a live playground, the Cache Auditor, and a per-macro trace.
-8. A searchable in-app reference, so none of the above needs this file to be usable.
+5. JanitorAI-style pronoun macros (`{{sub}}`, `{{obj}}`, `{{poss}}`, …) for your persona and for the character, so imported cards read correctly.
+6. Custom macros you define yourself, no coding needed — global, per character, or per chat.
+7. A template gallery of ready-made macros, and shareable macro packs (JSON import/export).
+8. A sandboxed Macro Workbench with a live playground, the Cache Auditor, and a per-macro trace.
+9. A searchable in-app reference, so none of the above needs this file to be usable.
 
 Requires the Experimental Macro Engine (User Settings, on by default). If it's off, the extension stays inactive and says so in its settings panel. Turning the engine on activates it right away.
 
@@ -27,7 +28,7 @@ Your own custom macros appear there too, with whatever descriptions you gave the
 
 <!-- macros:start -->
 
-*Generated from the macro definitions by `npm run docs` — 86 macros. Edit the descriptions in `src/*-macros.js`, not this table.*
+*Generated from the macro definitions by `npm run docs` — 102 macros. Edit the descriptions in `src/*-macros.js`, not this table.*
 
 ### Text
 
@@ -159,6 +160,27 @@ Your own custom macros appear there too, with whatever descriptions you gave the
 | `{{lorekeys::entry::[book]}}` | Lists the trigger keywords of a lorebook entry, comma separated. | a comma separated list of keywords |
 | `{{lorepick::[book]::[key]}}` | Inserts the content of one enabled entry — always the same one for this chat and key. A cache-friendly random story seed. | the chosen entry's content |
 | `{{loretokens::[scope]}}` | A rough token estimate (~4 characters per token) of lorebook content — pairs with {{lorecount}} for budget checks. | an estimated token count |
+
+### Pronouns
+
+| Macro | What it does | Returns |
+|---|---|---|
+| `{{charobj}}` | The object pronoun for the character (her, him, them). Capitalize the macro to capitalize the result. | the object pronoun, or the they/them form when none is set |
+| `{{charposs}}` | The possessive pronoun for the character (her, his, their). Capitalize the macro to capitalize the result. | the possessive pronoun, or the they/them form when none is set |
+| `{{charposs_p}}` | The standalone possessive pronoun for the character (hers, his, theirs). Capitalize the macro to capitalize the result. | the standalone possessive pronoun, or the they/them form when none is set |
+| `{{charpronouns}}` | The pronoun set in effect for the character, for stating it outright in a description. | the pronoun set, such as "she/her" |
+| `{{charpverb::singular::plural}}` | Picks the verb form that agrees with the character's pronouns, so "she is" and "they are" both come out right. | whichever of the two forms agrees |
+| `{{charref}}` | The reflexive pronoun for the character (herself, himself, themself). Capitalize the macro to capitalize the result. | the reflexive pronoun, or the they/them form when none is set |
+| `{{charsub}}` | The subject pronoun for the character (she, he, they). Capitalize the macro to capitalize the result. | the subject pronoun, or the they/them form when none is set |
+| `{{obj}}` | The object pronoun for your persona (her, him, them). Capitalize the macro to capitalize the result. | the object pronoun, or the they/them form when none is set |
+| `{{poss}}` | The possessive pronoun for your persona (her, his, their). Capitalize the macro to capitalize the result. | the possessive pronoun, or the they/them form when none is set |
+| `{{poss_p}}` | The standalone possessive pronoun for your persona (hers, his, theirs). Capitalize the macro to capitalize the result. | the standalone possessive pronoun, or the they/them form when none is set |
+| `{{pronouns}}` | The pronoun set in effect for your persona, for stating it outright in a description. | the pronoun set, such as "she/her" |
+| `{{pverb::singular::plural}}` | Picks the verb form that agrees with your persona's pronouns, so "she is" and "they are" both come out right. | whichever of the two forms agrees |
+| `{{ref}}` | The reflexive pronoun for your persona (herself, himself, themself). Capitalize the macro to capitalize the result. | the reflexive pronoun, or the they/them form when none is set |
+| `{{setcharpronouns::pronouns}}` | Overrides the character's pronouns for this chat only, leaving the saved setting alone. Writes nothing to the prompt. | nothing |
+| `{{setpronouns::pronouns}}` | Overrides your persona's pronouns for this chat only, leaving the saved setting alone. Writes nothing to the prompt. | nothing |
+| `{{sub}}` | The subject pronoun for your persona (she, he, they). Capitalize the macro to capitalize the result. | the subject pronoun, or the they/them form when none is set |
 
 Optional arguments are shown in `[brackets]`; `…` means the macro takes any number of further values. Worked examples for every macro are in the Workbench's Reference tab.
 

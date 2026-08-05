@@ -32,6 +32,7 @@ const SECTIONS = [
     { category: 'enhanced-date', title: 'Dates' },
     { category: 'enhanced-state', title: 'Cache-friendly state' },
     { category: 'enhanced-lorebook', title: 'Lorebook' },
+    { category: 'enhanced-pronoun', title: 'Pronouns' },
 ];
 
 /** Escapes the characters that would break a markdown table cell. */
@@ -49,6 +50,7 @@ async function buildCatalog() {
     const { registerDateMacros } = await import('../src/date-macros.js');
     const { registerStateMacros } = await import('../src/state-macros.js');
     const { registerLorebookMacros } = await import('../src/lorebook-macros.js');
+    const { registerPronounMacros } = await import('../src/pronoun-macros.js');
 
     registerUtilityMacros();
     registerCompatMacros();
@@ -57,6 +59,7 @@ async function buildCatalog() {
     registerDateMacros();
     registerStateMacros();
     registerLorebookMacros();
+    registerPronounMacros();
 
     return { catalog: getMacroCatalog(), macroSignature };
 }

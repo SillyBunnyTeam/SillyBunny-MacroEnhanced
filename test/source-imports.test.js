@@ -25,6 +25,8 @@ const MODULES = [
     '../src/date-macros.js',
     '../src/lorebook-cache.js',
     '../src/lorebook-macros.js',
+    '../src/pronoun-impl.js',
+    '../src/pronoun-macros.js',
     '../src/custom/store.js',
     '../src/custom/compile.js',
     '../src/custom/registrar.js',
